@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - TeleCart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">🛒</div>
+                    <span class="sidebar-logo-text">TeleCart</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Shop Management</div>
+                    <a href="/products" class="nav-link">
+                        <i class="fas fa-box"></i>
+                        <span>Products</span>
+                    </a>
+                    <a href="/categories" class="nav-link">
+                        <i class="fas fa-folder"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="/orders" class="nav-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                    </a>
+                    <a href="/customers" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>Customers</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Configuration</div>
+                    <a href="/settings" class="nav-link active">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="page-title">Settings</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" onclick="saveSettings()">
+                        <i class="fas fa-save"></i>
+                        Save Settings
+                    </button>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <!-- Bot Settings -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fab fa-telegram"></i>
+                            Bot Settings
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Bot Name</label>
+                                <input type="text" class="form-control" id="bot_name" placeholder="TeleCart">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Low Stock Threshold</label>
+                                <input type="number" class="form-control" id="low_stock_threshold" min="1"
+                                    placeholder="3">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Welcome Message</label>
+                            <textarea class="form-control" id="welcome_message" rows="4"
+                                placeholder="Welcome message shown to new users..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Currency & Payment Settings -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-credit-card"></i>
+                            Currency & Payment
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Store Currency</label>
+                            <select class="form-control" id="store_currency" onchange="togglePaymentSettings()">
+                                <option value="USD">💵 USD - US Dollar (Binance Pay / CryptoPay)</option>
+                                <option value="DZD">🇩🇿 DZD - Algerian Dinar (BaridiMob)</option>
+                            </select>
+                            <small style="color: var(--text-muted)">
+                                USD uses Binance Pay for auto-verification. DZD uses BaridiMob for manual verification.
+                            </small>
+                        </div>
+
+                        <!-- Binance Pay Settings (USD) -->
+                        <div id="coinpal-settings" style="margin-top: 20px;">
+                            <hr style="border-color: var(--border-color); margin: 20px 0;">
+                            <h4 style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <span style="color: #F0B90B;">💛</span> Binance Pay (Auto-Verification)
+                            </h4>
+                            <div class="alert alert-info" style="margin-bottom: 15px;">
+                                <i class="fas fa-info-circle"></i>
+                                <div>
+                                    <strong>How it works:</strong> Users pay to your Binance Pay ID, enter the Order ID,
+                                    and the bot automatically verifies & credits their balance!
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Binance Pay ID (UID)</label>
+                                <input type="text" class="form-control" id="binance_pay_id"
+                                    placeholder="Your Binance UID (e.g., 123456789)">
+                                <small style="color: var(--text-muted)">
+                                    Find in Binance app → Profile → User ID
+                                </small>
+                            </div>
+
+                            <h5 style="margin: 20px 0 15px; color: var(--text-muted);">
+                                <i class="fas fa-key"></i> API Credentials (for auto-verification)
+                            </h5>
+                            <div class="alert alert-warning" style="margin-bottom: 15px;">
+                                <i class="fas fa-shield-alt"></i>
+                                <div>
+                                    <strong>Security:</strong> Create an API key with <strong>ONLY "Enable
+                                        Reading"</strong> permission.
+                                    Never enable trading or withdrawal permissions!
+                                </div>
+                            </div>
+
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label class="form-label">Binance API Key</label>
+                                    <input type="text" class="form-control" id="binance_api_key"
+                                        placeholder="Your API Key">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Binance API Secret</label>
+                                    <input type="password" class="form-control" id="binance_api_secret"
+                                        placeholder="Your API Secret">
+                                </div>
+                            </div>
+
+                            <div class="alert"
+                                style="background: rgba(240, 185, 11, 0.1); border: 1px solid rgba(240, 185, 11, 0.3); margin-top: 15px;">
+                                <i class="fas fa-lightbulb" style="color: #F0B90B;"></i>
+                                <div>
+                                    <strong>How to get API keys:</strong>
+                                    <ol style="margin: 10px 0 0 20px; color: var(--text-muted);">
+                                        <li>Go to <a href="https://www.binance.com/en/my/settings/api-management"
+                                                target="_blank">Binance API Management</a></li>
+                                        <li>Click "Create API" → Choose "System Generated"</li>
+                                        <li>Enable ONLY "Enable Reading" permission</li>
+                                        <li>Copy the API Key and Secret Key</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BaridiMob Settings (DZD) -->
+                        <div id="baridimob-settings" style="margin-top: 20px; display: none;">
+                            <hr style="border-color: var(--border-color); margin: 20px 0;">
+                            <h4 style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <span style="color: #FFD700;">🏦</span> BaridiMob (Algeria)
+                            </h4>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label class="form-label">RIP Number</label>
+                                    <input type="text" class="form-control" id="baridimob_rip" placeholder="007999...">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Account Holder Name</label>
+                                    <input type="text" class="form-control" id="baridimob_name"
+                                        placeholder="Your name as shown on account">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Guide -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-book"></i>
+                            Quick Guide
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Getting Started:</strong>
+                                <ol style="margin: 10px 0 0 20px;">
+                                    <li>Choose your currency (USD or DZD)</li>
+                                    <li>Configure your payment method above</li>
+                                    <li>Create categories for your products</li>
+                                    <li>Add products with prices</li>
+                                    <li>Share your bot link with customers!</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <p><strong>Your Bot Link:</strong></p>
+                            <a href="https://t.me/Alpha_Digit_bot" target="_blank" class="btn btn-primary"
+                                style="margin-top: 10px;">
+                                <i class="fab fa-telegram"></i>
+                                https://t.me/Alpha_Digit_bot
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        function togglePaymentSettings() {
+            const currency = document.getElementById('store_currency').value;
+            const coinpalSettings = document.getElementById('coinpal-settings');
+            const baridimobSettings = document.getElementById('baridimob-settings');
+
+            if (currency === 'USD') {
+                coinpalSettings.style.display = 'block';
+                baridimobSettings.style.display = 'none';
+            } else {
+                coinpalSettings.style.display = 'none';
+                baridimobSettings.style.display = 'block';
+            }
+        }
+
+        async function loadSettings() {
+            try {
+                const settings = await apiGet('/settings');
+
+                document.getElementById('bot_name').value = settings.bot_name || '';
+                document.getElementById('welcome_message').value = settings.welcome_message || '';
+                document.getElementById('low_stock_threshold').value = settings.low_stock_threshold || '3';
+                document.getElementById('store_currency').value = settings.store_currency || 'USD';
+                document.getElementById('binance_pay_id').value = settings.binance_pay_id || '';
+                document.getElementById('binance_api_key').value = settings.binance_api_key || '';
+                document.getElementById('binance_api_secret').value = settings.binance_api_secret || '';
+                document.getElementById('baridimob_rip').value = settings.baridimob_rip || '';
+                document.getElementById('baridimob_name').value = settings.baridimob_name || '';
+
+                togglePaymentSettings();
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                showToast('Failed to load settings', 'error');
+            }
+        }
+
+        async function saveSettings() {
+            const settings = {
+                bot_name: document.getElementById('bot_name').value,
+                welcome_message: document.getElementById('welcome_message').value,
+                low_stock_threshold: document.getElementById('low_stock_threshold').value,
+                store_currency: document.getElementById('store_currency').value,
+                binance_pay_id: document.getElementById('binance_pay_id').value,
+                binance_api_key: document.getElementById('binance_api_key').value,
+                binance_api_secret: document.getElementById('binance_api_secret').value,
+                baridimob_rip: document.getElementById('baridimob_rip').value,
+                baridimob_name: document.getElementById('baridimob_name').value
+            };
+
+            try {
+                await apiPut('/settings', settings);
+                showToast('Settings saved successfully');
+            } catch (error) {
+                showToast('Failed to save settings', 'error');
+            }
+        }
+
+        // Load on page load
+        loadSettings();
+    </script>
+</body>
+
+</html>

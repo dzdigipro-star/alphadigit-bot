@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoinPal - Secure Payment Gateway</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f1628 0%, #1a237e 50%, #0f1628 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .payment-card {
+            background: linear-gradient(145deg, #1a2744 0%, #0d1a2d 100%);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .logo-subtitle {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .secure-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #4caf50;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2196f3;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-input:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .amount-input-wrapper {
+            position: relative;
+        }
+
+        .currency-badge {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        .security-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .security-notice svg {
+            color: #4caf50;
+            flex-shrink: 0;
+        }
+
+        .security-notice p {
+            color: #aaa;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .pay-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .pay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(33, 150, 243, 0.4);
+        }
+
+        .pay-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            color: #666;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .footer span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .error-message {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #ff5252;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="payment-card">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">💳</div>
+                <div>
+                    <div class="logo-text">CoinPal</div>
+                    <div class="logo-subtitle">Secure Payment Gateway</div>
+                </div>
+            </div>
+            <div class="secure-badge">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path
+                        d="M8 0c-.69 0-1.32.2-1.86.56C5.09 1.21 4.5 2.34 4.5 3.5v1.09c-.82.26-1.5.91-1.5 1.91v5c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-5c0-1-.68-1.65-1.5-1.91V3.5c0-1.16-.59-2.29-1.64-2.94A3.5 3.5 0 0 0 8 0zm0 1a2.5 2.5 0 0 1 2.5 2.5v1h-5v-1A2.5 2.5 0 0 1 8 1z" />
+                </svg>
+                Secure
+            </div>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <form id="paymentForm">
+            <div class="form-group">
+                <label class="form-label">Telegram ID</label>
+                <input type="text" id="telegramId" class="form-input" readonly>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount</label>
+                <div class="amount-input-wrapper">
+                    <input type="number" id="amount" class="form-input" min="1" max="10000" step="0.01"
+                        placeholder="0.00" required>
+                    <span class="currency-badge">USDT</span>
+                </div>
+            </div>
+
+            <div class="security-notice">
+                <svg width="20" height="20" fill="#4caf50" viewBox="0 0 16 16">
+                    <path
+                        d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z" />
+                </svg>
+                <p>Your payment is protected with end-to-end encryption and processed through secure channels.</p>
+            </div>
+
+            <button type="submit" class="pay-button" id="payButton">
+                <span id="buttonText">💳 Proceed to Payment</span>
+                <div id="buttonSpinner" class="spinner loading"></div>
+            </button>
+        </form>
+
+        <div class="footer">
+            <span>Powered by CoinPal</span>
+            <span>🔒 256-bit SSL</span>
+            <span>PCI Compliant</span>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const telegramId = urlParams.get('telegram_id');
+        const presetAmount = urlParams.get('amount');
+
+        // Set values from URL
+        if (telegramId) {
+            document.getElementById('telegramId').value = telegramId;
+        }
+        if (presetAmount) {
+            document.getElementById('amount').value = presetAmount;
+        }
+
+        // Handle form submission
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const amount = parseFloat(document.getElementById('amount').value);
+            const tid = document.getElementById('telegramId').value;
+
+            if (!tid) {
+                showError('Invalid Telegram ID');
+                return;
+            }
+
+            if (!amount || amount < 1) {
+                showError('Minimum amount is 1 USDT');
+                return;
+            }
+
+            // Show loading state
+            setLoading(true);
+            hideError();
+
+            try {
+                // Call our API to create CoinPal payment
+                const response = await fetch('/api/coinpal/create-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        telegramId: tid,
+                        amount: amount
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.checkoutUrl) {
+                    // Redirect to CoinPal checkout
+                    window.location.href = data.checkoutUrl;
+                } else {
+                    showError(data.error || 'Failed to create payment. Please try again.');
+                    setLoading(false);
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                showError('Network error. Please try again.');
+                setLoading(false);
+            }
+        });
+
+        function setLoading(loading) {
+            const button = document.getElementById('payButton');
+            const buttonText = document.getElementById('buttonText');
+            const spinner = document.getElementById('buttonSpinner');
+
+            button.disabled = loading;
+            buttonText.textContent = loading ? 'Creating Payment...' : '💳 Proceed to Payment';
+            spinner.classList.toggle('active', loading);
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>

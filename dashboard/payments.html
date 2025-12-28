@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payments - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">🛒</div>
+                    <span class="sidebar-logo-text">Store</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Shop Management</div>
+                    <a href="/products" class="nav-link">
+                        <i class="fas fa-box"></i>
+                        <span>Products</span>
+                    </a>
+                    <a href="/categories" class="nav-link">
+                        <i class="fas fa-folder"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="/orders" class="nav-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                    </a>
+                    <a href="/payments" class="nav-link active">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Payments</span>
+                        <span class="badge" id="pending-badge" style="display:none">0</span>
+                    </a>
+                    <a href="/customers" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>Customers</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Configuration</div>
+                    <a href="/settings" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="page-title">💳 Payments</h1>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" onclick="loadPayments()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Filter Tabs -->
+                <div class="filter-tabs" style="margin-bottom: 20px;">
+                    <button class="filter-tab active" onclick="filterPayments('all')">All</button>
+                    <button class="filter-tab" onclick="filterPayments('pending')">⏳ Pending</button>
+                    <button class="filter-tab" onclick="filterPayments('verified')">✅ Verified</button>
+                    <button class="filter-tab" onclick="filterPayments('rejected')">❌ Rejected</button>
+                </div>
+
+                <!-- Payments Table -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Customer</th>
+                                        <th>Amount</th>
+                                        <th>Method</th>
+                                        <th>Order ID</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payments-table">
+                                    <tr>
+                                        <td colspan="8" class="empty-state">
+                                            <i class="fas fa-credit-card"></i>
+                                            <h3>No payments yet</h3>
+                                            <p>Payments will appear here when customers add funds.</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Verify Modal -->
+    <div class="modal-overlay" id="verify-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Verify Payment</h3>
+                <button class="modal-close" onclick="closeModal('verify-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="payment-details"></div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">Admin Notes (optional)</label>
+                    <textarea class="form-control" id="admin-notes" rows="2"
+                        placeholder="Add notes about this payment..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('verify-modal')">Cancel</button>
+                <button class="btn btn-danger" onclick="updatePayment('rejected')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+                <button class="btn btn-success" onclick="updatePayment('verified')">
+                    <i class="fas fa-check"></i> Approve & Credit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let allPayments = [];
+        let currentFilter = 'all';
+        let selectedPayment = null;
+
+        async function loadPayments() {
+            try {
+                const response = await fetch('/api/payments');
+                allPayments = await response.json();
+
+                // Update pending badge
+                const pending = allPayments.filter(p => p.status === 'pending').length;
+                const badge = document.getElementById('pending-badge');
+                if (pending > 0) {
+                    badge.textContent = pending;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                renderPayments();
+            } catch (error) {
+                console.error('Error loading payments:', error);
+                showToast('Failed to load payments', 'error');
+            }
+        }
+
+        function filterPayments(status) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            renderPayments();
+        }
+
+        function renderPayments() {
+            const tbody = document.getElementById('payments-table');
+            let payments = allPayments;
+
+            if (currentFilter !== 'all') {
+                payments = allPayments.filter(p => p.status === currentFilter);
+            }
+
+            if (payments.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-credit-card"></i>
+                            <h3>No ${currentFilter === 'all' ? '' : currentFilter} payments</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = payments.map(p => `
+                <tr class="${p.status === 'pending' ? 'highlight-row' : ''}">
+                    <td>#${p.id}</td>
+                    <td>
+                        <strong>${p.first_name || p.username || 'User'}</strong>
+                        <br><small style="color: var(--text-muted)">@${p.username || p.telegram_id}</small>
+                    </td>
+                    <td><strong>$${p.amount_usd.toFixed(2)}</strong></td>
+                    <td>
+                        <span class="badge badge-${getMethodBadge(p.payment_method)}">
+                            ${getMethodIcon(p.payment_method)} ${p.payment_method}
+                        </span>
+                    </td>
+                    <td>
+                        <code style="font-size: 11px; word-break: break-all;">
+                            ${p.transaction_hash || p.coinpal_order_id || '-'}
+                        </code>
+                    </td>
+                    <td>
+                        <span class="badge badge-${getStatusBadge(p.status)}">
+                            ${getStatusIcon(p.status)} ${p.status}
+                        </span>
+                    </td>
+                    <td>${formatDate(p.created_at)}</td>
+                    <td>
+                        ${p.status === 'pending' ? `
+                            <button class="btn btn-success btn-sm" onclick="openVerifyModal(${p.id})">
+                                <i class="fas fa-check"></i> Review
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getMethodBadge(method) {
+            const badges = { 'binance': 'warning', 'cryptopay': 'info', 'baridimob': 'primary', 'manual': 'secondary' };
+            return badges[method] || 'secondary';
+        }
+
+        function getMethodIcon(method) {
+            const icons = { 'binance': '💛', 'cryptopay': '💎', 'baridimob': '🏦', 'manual': '✋' };
+            return icons[method] || '💳';
+        }
+
+        function getStatusBadge(status) {
+            const badges = { 'pending': 'warning', 'verified': 'success', 'rejected': 'danger' };
+            return badges[status] || 'secondary';
+        }
+
+        function getStatusIcon(status) {
+            const icons = { 'pending': '⏳', 'verified': '✅', 'rejected': '❌' };
+            return icons[status] || '';
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function openVerifyModal(paymentId) {
+            selectedPayment = allPayments.find(p => p.id === paymentId);
+            if (!selectedPayment) return;
+
+            document.getElementById('payment-details').innerHTML = `
+                <div class="alert alert-warning" style="margin-bottom: 15px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Pending Verification</strong>
+                </div>
+                <table style="width: 100%;">
+                    <tr><td><strong>Customer:</strong></td><td>${selectedPayment.first_name || selectedPayment.username}</td></tr>
+                    <tr><td><strong>Telegram:</strong></td><td>@${selectedPayment.username || selectedPayment.telegram_id}</td></tr>
+                    <tr><td><strong>Amount:</strong></td><td><strong style="color: var(--success);">$${selectedPayment.amount_usd.toFixed(2)}</strong></td></tr>
+                    <tr><td><strong>Method:</strong></td><td>${selectedPayment.payment_method}</td></tr>
+                    <tr><td><strong>Order ID:</strong></td><td><code>${selectedPayment.transaction_hash || selectedPayment.coinpal_order_id || '-'}</code></td></tr>
+                    <tr><td><strong>Date:</strong></td><td>${formatDate(selectedPayment.created_at)}</td></tr>
+                </table>
+            `;
+            document.getElementById('admin-notes').value = selectedPayment.admin_notes || '';
+            openModal('verify-modal');
+        }
+
+        async function updatePayment(status) {
+            if (!selectedPayment) return;
+
+            try {
+                const response = await fetch(`/api/payments/${selectedPayment.id}/verify`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: status,
+                        admin_notes: document.getElementById('admin-notes').value
+                    })
+                });
+
+                if (response.ok) {
+                    showToast(`Payment ${status}!`, 'success');
+                    closeModal('verify-modal');
+                    loadPayments();
+                } else {
+                    showToast('Failed to update payment', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error updating payment', 'error');
+            }
+        }
+
+        // Load on page load
+        loadPayments();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadPayments, 30000);
+    </script>
+
+    <style>
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .highlight-row {
+            background: rgba(255, 193, 7, 0.1);
+        }
+
+        .highlight-row:hover {
+            background: rgba(255, 193, 7, 0.15) !important;
+        }
+    </style>
+</body>
+
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleCart - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">🛒</div>
+                    <span class="sidebar-logo-text">TeleCart</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="/" class="nav-link active">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Shop Management</div>
+                    <a href="/products" class="nav-link">
+                        <i class="fas fa-box"></i>
+                        <span>Products</span>
+                    </a>
+                    <a href="/categories" class="nav-link">
+                        <i class="fas fa-folder"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="/orders" class="nav-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                        <span class="badge" id="pending-orders-badge" style="display:none">0</span>
+                    </a>
+                    <a href="/payments" class="nav-link">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Payments</span>
+                    </a>
+                    <a href="/customers" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>Customers</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Configuration</div>
+                    <a href="/settings" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="page-title">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <a href="https://t.me/Alpha_Digit_bot" target="_blank" class="btn btn-primary">
+                        <i class="fab fa-telegram"></i>
+                        Open Bot
+                    </a>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card success">
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-value" id="stat-revenue">$0.00</div>
+                        <div class="stat-label">Total Revenue</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-icon">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                        <div class="stat-value" id="stat-orders">0</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-value" id="stat-today">0</div>
+                        <div class="stat-label">Orders Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-value" id="stat-customers">0</div>
+                        <div class="stat-label">Total Customers</div>
+                    </div>
+                </div>
+
+                <!-- Alerts Row -->
+                <div class="grid-2" style="margin-bottom: 30px;">
+                    <!-- Pending Orders Alert -->
+                    <div class="card" id="pending-orders-card" style="display: none;">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-exclamation-circle" style="color: var(--warning)"></i>
+                                Pending Deliveries
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                                You have <strong id="pending-count">0</strong> orders waiting for manual delivery.
+                            </p>
+                            <a href="/orders" class="btn btn-warning">
+                                <i class="fas fa-arrow-right"></i>
+                                View Orders
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Alert -->
+                    <div class="card" id="low-stock-card" style="display: none;">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-box-open" style="color: var(--danger)"></i>
+                                Low Stock Alert
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="low-stock-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-history"></i>
+                            Recent Orders
+                        </h3>
+                        <a href="/orders" class="btn btn-secondary btn-sm">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Product</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-orders-table">
+                                    <tr>
+                                        <td colspan="6" class="empty-state">
+                                            <i class="fas fa-shopping-cart"></i>
+                                            <h3>No orders yet</h3>
+                                            <p>Orders will appear here once customers start purchasing.</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                // Update stats
+                document.getElementById('stat-revenue').textContent = '$' + stats.totalRevenue.toFixed(2);
+                document.getElementById('stat-orders').textContent = stats.totalOrders;
+                document.getElementById('stat-today').textContent = stats.todayOrders;
+                document.getElementById('stat-customers').textContent = stats.totalCustomers;
+
+                // Pending orders badge
+                if (stats.pendingOrders > 0) {
+                    const badge = document.getElementById('pending-orders-badge');
+                    badge.textContent = stats.pendingOrders;
+                    badge.style.display = 'inline';
+
+                    document.getElementById('pending-orders-card').style.display = 'block';
+                    document.getElementById('pending-count').textContent = stats.pendingOrders;
+                }
+
+                // Low stock alert
+                const lowStockItems = [...stats.lowStockProducts, ...stats.outOfStockProducts];
+                if (lowStockItems.length > 0) {
+                    document.getElementById('low-stock-card').style.display = 'block';
+                    const list = document.getElementById('low-stock-list');
+                    list.innerHTML = lowStockItems.map(p => `
+                        <div class="alert ${p.current_stock === 0 ? 'alert-danger' : 'alert-warning'}">
+                            <i class="fas ${p.current_stock === 0 ? 'fa-times-circle' : 'fa-exclamation-triangle'}"></i>
+                            <span><strong>${p.name}</strong> - ${p.current_stock === 0 ? 'Out of stock' : p.current_stock + ' remaining'}</span>
+                        </div>
+                    `).join('');
+                }
+
+                // Recent orders
+                if (stats.recentOrders.length > 0) {
+                    const tbody = document.getElementById('recent-orders-table');
+                    tbody.innerHTML = stats.recentOrders.map(order => `
+                        <tr>
+                            <td>#${order.id}</td>
+                            <td>${order.first_name || order.username || 'User ' + order.telegram_id}</td>
+                            <td>${order.product_name}</td>
+                            <td>$${order.total_usd.toFixed(2)}</td>
+                            <td><span class="badge badge-${getStatusBadge(order.status)}">${order.status}</span></td>
+                            <td>${formatDate(order.created_at)}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showToast('Failed to load dashboard data', 'error');
+            }
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': 'warning',
+                'paid': 'info',
+                'delivered': 'success',
+                'cancelled': 'danger',
+                'refunded': 'primary'
+            };
+            return badges[status] || 'primary';
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Load on page load
+        loadDashboard();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+
+</html>

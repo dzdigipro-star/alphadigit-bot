@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers - TeleCart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">🛒</div>
+                    <span class="sidebar-logo-text">TeleCart</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Shop Management</div>
+                    <a href="/products" class="nav-link">
+                        <i class="fas fa-box"></i>
+                        <span>Products</span>
+                    </a>
+                    <a href="/categories" class="nav-link">
+                        <i class="fas fa-folder"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="/orders" class="nav-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                    </a>
+                    <a href="/customers" class="nav-link active">
+                        <i class="fas fa-users"></i>
+                        <span>Customers</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Configuration</div>
+                    <a href="/settings" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="page-title">Customers</h1>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Telegram ID</th>
+                                        <th>Balance</th>
+                                        <th>Total Spent</th>
+                                        <th>Orders</th>
+                                        <th>Last Active</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customers-table">
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; padding: 40px;">
+                                            <div class="spinner" style="margin: 0 auto;"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Customer Details Modal -->
+    <div class="modal-overlay" id="customer-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Customer Details</h3>
+                <button class="modal-close" onclick="closeModal('customer-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="customer-id">
+
+                <div class="grid-2" style="margin-bottom: 20px;">
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Name</p>
+                        <p><strong id="customer-name"></strong></p>
+                    </div>
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Telegram</p>
+                        <p id="customer-telegram"></p>
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-bottom: 20px;">
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Current Balance</p>
+                        <p style="font-size: 1.5rem; font-weight: 600; color: var(--success);" id="customer-balance">
+                        </p>
+                    </div>
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Total Spent</p>
+                        <p style="font-size: 1.5rem; font-weight: 600;" id="customer-spent"></p>
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 20px 0;">
+
+                <h4 style="margin-bottom: 15px;">Adjust Balance</h4>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Amount (USD)</label>
+                        <input type="number" class="form-control" id="balance-amount" min="0" step="0.01"
+                            placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Action</label>
+                        <select class="form-control" id="balance-action">
+                            <option value="add">Add to balance</option>
+                            <option value="set">Set balance to</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="updateBalance()" style="margin-bottom: 20px;">
+                    <i class="fas fa-wallet"></i> Update Balance
+                </button>
+
+                <hr style="border-color: var(--border-color); margin: 20px 0;">
+
+                <h4 style="margin-bottom: 15px;">Order History</h4>
+                <div id="customer-orders" style="max-height: 200px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let customers = [];
+
+        async function loadCustomers() {
+            try {
+                customers = await apiGet('/customers');
+                renderCustomers();
+            } catch (error) {
+                console.error('Error loading customers:', error);
+                showToast('Failed to load customers', 'error');
+            }
+        }
+
+        function renderCustomers() {
+            const tbody = document.getElementById('customers-table');
+
+            if (customers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <h3>No customers yet</h3>
+                            <p>Customers will appear here when they start using your bot.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = customers.map(customer => `
+                <tr>
+                    <td>
+                        <strong>${customer.first_name || 'Unknown'} ${customer.last_name || ''}</strong>
+                        ${customer.username ? `<br><small style="color: var(--text-muted)">@${customer.username}</small>` : ''}
+                    </td>
+                    <td><code>${customer.telegram_id}</code></td>
+                    <td><span style="color: var(--success)">$${customer.balance_usd.toFixed(2)}</span></td>
+                    <td>$${customer.total_spent_usd.toFixed(2)}</td>
+                    <td>${customer.order_count}</td>
+                    <td>${formatDate(customer.last_active)}</td>
+                    <td><span class="badge badge-${customer.is_banned ? 'danger' : 'success'}">${customer.is_banned ? 'Banned' : 'Active'}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn btn-secondary btn-sm btn-icon" onclick="viewCustomer(${customer.id})" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-${customer.is_banned ? 'success' : 'danger'} btn-sm btn-icon" onclick="toggleBan(${customer.id}, ${!customer.is_banned})" title="${customer.is_banned ? 'Unban' : 'Ban'}">
+                                <i class="fas fa-${customer.is_banned ? 'unlock' : 'ban'}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function viewCustomer(id) {
+            try {
+                const customer = await apiGet(`/customers/${id}`);
+
+                document.getElementById('customer-id').value = customer.id;
+                document.getElementById('customer-name').textContent = `${customer.first_name || 'Unknown'} ${customer.last_name || ''}`;
+                document.getElementById('customer-telegram').textContent = customer.username ? '@' + customer.username : 'ID: ' + customer.telegram_id;
+                document.getElementById('customer-balance').textContent = '$' + customer.balance_usd.toFixed(2);
+                document.getElementById('customer-spent').textContent = '$' + customer.total_spent_usd.toFixed(2);
+                document.getElementById('balance-amount').value = '';
+
+                // Render orders
+                const ordersDiv = document.getElementById('customer-orders');
+                if (customer.orders && customer.orders.length > 0) {
+                    ordersDiv.innerHTML = customer.orders.map(order => `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 8px;">
+                            <div>
+                                <strong>#${order.id}</strong> - ${order.product_name}
+                                <br><small style="color: var(--text-muted)">${formatDate(order.created_at)}</small>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong>$${order.total_usd.toFixed(2)}</strong>
+                                <br><span class="badge badge-${getStatusBadge(order.status)}">${order.status}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    ordersDiv.innerHTML = '<p style="color: var(--text-muted)">No orders yet.</p>';
+                }
+
+                openModal('customer-modal');
+            } catch (error) {
+                showToast('Failed to load customer', 'error');
+            }
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': 'warning',
+                'paid': 'info',
+                'delivered': 'success',
+                'cancelled': 'danger',
+                'refunded': 'primary'
+            };
+            return badges[status] || 'primary';
+        }
+
+        async function updateBalance() {
+            const customerId = document.getElementById('customer-id').value;
+            const amount = parseFloat(document.getElementById('balance-amount').value);
+            const action = document.getElementById('balance-action').value;
+
+            if (isNaN(amount) || amount < 0) {
+                showToast('Please enter a valid amount', 'error');
+                return;
+            }
+
+            try {
+                await apiPut(`/customers/${customerId}/balance`, { amount, action });
+                showToast('Balance updated successfully');
+
+                // Refresh the modal
+                await viewCustomer(parseInt(customerId));
+                loadCustomers();
+            } catch (error) {
+                showToast('Failed to update balance', 'error');
+            }
+        }
+
+        async function toggleBan(id, ban) {
+            const action = ban ? 'ban' : 'unban';
+            if (!await confirmAction(`Are you sure you want to ${action} this customer?`)) return;
+
+            try {
+                await apiPut(`/customers/${id}/ban`, { is_banned: ban });
+                showToast(`Customer ${action}ned successfully`);
+                loadCustomers();
+            } catch (error) {
+                showToast(`Failed to ${action} customer`, 'error');
+            }
+        }
+
+        // Load on page load
+        loadCustomers();
+    </script>
+</body>
+
+</html>

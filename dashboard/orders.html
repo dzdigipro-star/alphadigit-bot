@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders - TeleCart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">🛒</div>
+                    <span class="sidebar-logo-text">TeleCart</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Shop Management</div>
+                    <a href="/products" class="nav-link">
+                        <i class="fas fa-box"></i>
+                        <span>Products</span>
+                    </a>
+                    <a href="/categories" class="nav-link">
+                        <i class="fas fa-folder"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="/orders" class="nav-link active">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Orders</span>
+                    </a>
+                    <a href="/customers" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>Customers</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Configuration</div>
+                    <a href="/settings" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="page-title">Orders</h1>
+                </div>
+                <div class="header-right">
+                    <select class="form-control" id="filter-status" style="width: auto;">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid (Awaiting Delivery)</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Product</th>
+                                        <th>Amount</th>
+                                        <th>Delivery</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-table">
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; padding: 40px;">
+                                            <div class="spinner" style="margin: 0 auto;"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal-overlay" id="order-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Order #<span id="order-id"></span></h3>
+                <button class="modal-close" onclick="closeModal('order-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2" style="margin-bottom: 20px;">
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Customer</p>
+                        <p><strong id="order-customer"></strong></p>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;" id="order-telegram"></p>
+                    </div>
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Product</p>
+                        <p><strong id="order-product"></strong></p>
+                    </div>
+                </div>
+                <div class="grid-2" style="margin-bottom: 20px;">
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Amount</p>
+                        <p style="font-size: 1.5rem; font-weight: 600;" id="order-amount"></p>
+                    </div>
+                    <div>
+                        <p style="color: var(--text-muted); margin-bottom: 5px;">Date</p>
+                        <p id="order-date"></p>
+                    </div>
+                </div>
+
+                <div id="delivery-section" style="display: none;">
+                    <hr style="border-color: var(--border-color); margin: 20px 0;">
+                    <h4 style="margin-bottom: 15px;">Manual Delivery</h4>
+                    <div class="form-group">
+                        <label class="form-label">Delivery Data (key/credentials to send to customer)</label>
+                        <textarea class="form-control" id="order-delivery-data" rows="3"
+                            placeholder="Enter the product key, account credentials, or instructions..."></textarea>
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 20px 0;">
+                <div class="form-group">
+                    <label class="form-label">Order Status</label>
+                    <select class="form-control" id="order-status">
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('order-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateOrder()">Update Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let orders = [];
+        let currentOrderId = null;
+
+        async function loadOrders() {
+            try {
+                orders = await apiGet('/orders');
+                renderOrders();
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                showToast('Failed to load orders', 'error');
+            }
+        }
+
+        function renderOrders() {
+            const tbody = document.getElementById('orders-table');
+            const filter = document.getElementById('filter-status').value;
+
+            let filtered = orders;
+            if (filter) {
+                filtered = orders.filter(o => o.status === filter);
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-shopping-cart"></i>
+                            <h3>No orders found</h3>
+                            <p>${filter ? 'No orders with this status.' : 'Orders will appear here when customers make purchases.'}</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(order => `
+                <tr>
+                    <td><strong>#${order.id}</strong></td>
+                    <td>
+                        ${order.first_name || order.username || 'User'}
+                        <br><small style="color: var(--text-muted)">@${order.username || order.telegram_id}</small>
+                    </td>
+                    <td>${order.product_name}</td>
+                    <td>$${order.total_usd.toFixed(2)}</td>
+                    <td><span class="badge badge-${order.delivery_type === 'auto' ? 'info' : 'primary'}">${order.delivery_type}</span></td>
+                    <td><span class="badge badge-${getStatusBadge(order.status)}">${order.status}</span></td>
+                    <td>${formatDate(order.created_at)}</td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm btn-icon" onclick="viewOrder(${order.id})" title="View">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': 'warning',
+                'paid': 'info',
+                'delivered': 'success',
+                'cancelled': 'danger',
+                'refunded': 'primary'
+            };
+            return badges[status] || 'primary';
+        }
+
+        async function viewOrder(id) {
+            try {
+                const order = await apiGet(`/orders/${id}`);
+                currentOrderId = id;
+
+                document.getElementById('order-id').textContent = order.id;
+                document.getElementById('order-customer').textContent = order.first_name || order.username || 'User';
+                document.getElementById('order-telegram').textContent = order.username ? '@' + order.username : 'ID: ' + order.telegram_id;
+                document.getElementById('order-product').textContent = order.product_name;
+                document.getElementById('order-amount').textContent = '$' + order.total_usd.toFixed(2);
+                document.getElementById('order-date').textContent = formatDate(order.created_at);
+                document.getElementById('order-status').value = order.status;
+                document.getElementById('order-delivery-data').value = order.delivered_data || '';
+
+                // Show delivery section for manual orders that are paid
+                const deliverySection = document.getElementById('delivery-section');
+                deliverySection.style.display = (order.delivery_type === 'manual' && order.status === 'paid') ? 'block' : 'none';
+
+                openModal('order-modal');
+            } catch (error) {
+                showToast('Failed to load order', 'error');
+            }
+        }
+
+        async function updateOrder() {
+            const status = document.getElementById('order-status').value;
+            const deliveredData = document.getElementById('order-delivery-data').value;
+
+            try {
+                await apiPut(`/orders/${currentOrderId}`, {
+                    status,
+                    delivered_data: deliveredData
+                });
+
+                showToast('Order updated successfully');
+                closeModal('order-modal');
+                loadOrders();
+            } catch (error) {
+                showToast('Failed to update order', 'error');
+            }
+        }
+
+        // Filter change
+        document.getElementById('filter-status').addEventListener('change', renderOrders);
+
+        // Load on page load
+        loadOrders();
+
+        // Auto-refresh every minute
+        setInterval(loadOrders, 60000);
+    </script>
+</body>
+
+</html>
