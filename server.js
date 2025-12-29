@@ -9,9 +9,39 @@ const apiRoutes = require('./api');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Dashboard credentials from environment variables
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'changeme123';
+
+// Basic Auth Middleware for Dashboard
+function basicAuth(req, res, next) {
+    // Skip auth for health check
+    if (req.path === '/health') return next();
+
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Basic ')) {
+        res.set('WWW-Authenticate', 'Basic realm="Dashboard"');
+        return res.status(401).send('Authentication required');
+    }
+
+    const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
+    const [username, password] = credentials.split(':');
+
+    if (username === ADMIN_USER && password === ADMIN_PASS) {
+        return next();
+    }
+
+    res.set('WWW-Authenticate', 'Basic realm="Dashboard"');
+    return res.status(401).send('Invalid credentials');
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Apply auth to dashboard and API routes
+app.use(basicAuth);
 app.use(express.static(path.join(__dirname, 'dashboard')));
 
 // API Routes
