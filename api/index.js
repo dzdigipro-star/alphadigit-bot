@@ -292,11 +292,53 @@ router.get('/orders/:id', (req, res) => {
 router.put('/orders/:id', (req, res) => {
     try {
         const { status, delivered_data } = req.body;
+        const orderId = parseInt(req.params.id);
 
+        // Get order details including customer Telegram ID
+        const order = get(`
+            SELECT o.*, c.telegram_id, p.name as product_name
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.id
+            JOIN products p ON o.product_id = p.id
+            WHERE o.id = ?
+        `, [orderId]);
+
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Update order in database
         run(`
             UPDATE orders SET status = ?, delivered_data = ?, updated_at = datetime('now')
             WHERE id = ?
-        `, [status, delivered_data, parseInt(req.params.id)]);
+        `, [status, delivered_data, orderId]);
+
+        // If changing to delivered status AND has delivery data, queue notification
+        if (status === 'delivered' && delivered_data && delivered_data.trim()) {
+            // Queue delivery notification for bot to send
+            const notification = {
+                type: 'delivery',
+                telegram_id: order.telegram_id,
+                product_name: order.product_name,
+                order_id: orderId,
+                delivered_data: delivered_data,
+                created_at: new Date().toISOString()
+            };
+
+            // Get existing notifications or create new array
+            let notifications = [];
+            const existing = getSetting('pending_notifications');
+            if (existing) {
+                try {
+                    notifications = JSON.parse(existing);
+                } catch (e) {
+                    notifications = [];
+                }
+            }
+            notifications.push(notification);
+            setSetting('pending_notifications', JSON.stringify(notifications));
+            saveDatabase();
+        }
 
         res.json({ message: 'Order updated' });
     } catch (error) {
@@ -555,10 +597,83 @@ router.get('/settings', (req, res) => {
 router.put('/settings', (req, res) => {
     try {
         const settings = req.body;
+        console.log('📝 Saving settings:', Object.keys(settings));
+        if (settings.bot_token) {
+            console.log('🔑 Bot token received:', settings.bot_token.substring(0, 10) + '...');
+        }
         for (const [key, value] of Object.entries(settings)) {
             setSetting(key, value);
         }
+        saveDatabase(); // Persist changes to disk
+        console.log('✅ Settings saved to database');
         res.json({ message: 'Settings updated' });
+    } catch (error) {
+        console.error('❌ Settings save error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================
+// ADMIN PASSWORD
+// =====================
+
+router.put('/admin/password', (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        // Get current password from settings
+        const storedPass = getSetting('admin_password') || 'changeme123';
+
+        if (currentPassword !== storedPass) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        }
+
+        setSetting('admin_password', newPassword);
+        saveDatabase();
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// =====================
+// BROADCAST MESSAGE
+// =====================
+
+router.post('/broadcast', async (req, res) => {
+    try {
+        const { message, includeInactive } = req.body;
+
+        if (!message || message.trim().length === 0) {
+            return res.status(400).json({ error: 'Message cannot be empty' });
+        }
+
+        // Get all customers
+        let customers;
+        if (includeInactive) {
+            customers = query(`SELECT telegram_id FROM customers WHERE is_banned = 0`);
+        } else {
+            // Only active customers (active in last 30 days)
+            customers = query(`SELECT telegram_id FROM customers WHERE is_banned = 0 AND date(last_active) >= date('now', '-30 days')`);
+        }
+
+        // Store broadcast for the bot to send
+        setSetting('pending_broadcast', JSON.stringify({
+            message: message,
+            recipients: customers.map(c => c.telegram_id),
+            created_at: new Date().toISOString()
+        }));
+        saveDatabase();
+
+        res.json({
+            message: 'Broadcast queued',
+            recipients: customers.length
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

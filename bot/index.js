@@ -1,5 +1,5 @@
 const { Telegraf, Markup } = require('telegraf');
-const { getSetting, query, run, get, saveDatabase } = require('../database');
+const { getSetting, setSetting, query, run, get, saveDatabase } = require('../database');
 
 // Create bot instance
 function createBot(token) {
@@ -229,7 +229,7 @@ function getCurrencyInfo() {
 // Show main menu with keyboard
 async function showMainMenu(ctx, isEdit = false) {
     const welcomeMessage = getSetting('welcome_message') || 'Welcome to our store! 🛒';
-    const botName = getSetting('bot_name') || 'TeleCart';
+    const botName = getSetting('bot_name') || 'AlphaDigit';
 
     const message = `🛒 *${botName}*\n\n${welcomeMessage}`;
     const keyboard = Markup.keyboard([
@@ -1237,4 +1237,92 @@ async function showBaridimobPayment(ctx) {
     );
 }
 
-module.exports = { createBot };
+// Notification sender - checks for pending broadcasts and delivery notifications
+let notificationBot = null;
+
+function startBroadcastSender(bot) {
+    notificationBot = bot;
+    console.log('📢 Notification sender initialized');
+
+    // Check for pending notifications every 5 seconds
+    setInterval(async () => {
+        try {
+            // Process delivery notifications
+            const pendingNotifications = getSetting('pending_notifications');
+            if (pendingNotifications) {
+                let notifications = [];
+                try {
+                    notifications = JSON.parse(pendingNotifications);
+                } catch (e) {
+                    notifications = [];
+                }
+
+                if (notifications.length > 0) {
+                    console.log(`📦 Processing ${notifications.length} delivery notifications...`);
+
+                    for (const notif of notifications) {
+                        try {
+                            if (notif.type === 'delivery') {
+                                const message =
+                                    `🎉 *Order #${notif.order_id} Delivered!*\n\n` +
+                                    `📦 *Product:* ${notif.product_name}\n\n` +
+                                    `🔑 *Your Product Key/Data:*\n` +
+                                    `\`\`\`\n${notif.delivered_data}\n\`\`\`\n\n` +
+                                    `Thank you for your purchase! 🙏`;
+
+                                await notificationBot.telegram.sendMessage(notif.telegram_id, message, {
+                                    parse_mode: 'Markdown'
+                                });
+                                console.log(`✅ Delivery sent to ${notif.telegram_id} for order #${notif.order_id}`);
+                            }
+                        } catch (error) {
+                            console.log(`❌ Failed to send notification to ${notif.telegram_id}: ${error.message}`);
+                        }
+                        // Rate limit
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                    // Clear notifications
+                    run(`DELETE FROM settings WHERE key = 'pending_notifications'`);
+                    saveDatabase();
+                }
+            }
+
+            // Process broadcasts
+            const pendingBroadcast = getSetting('pending_broadcast');
+            if (pendingBroadcast) {
+                const broadcast = JSON.parse(pendingBroadcast);
+                if (broadcast.recipients && broadcast.recipients.length > 0) {
+                    console.log(`📢 Sending broadcast to ${broadcast.recipients.length} users...`);
+
+                    let sent = 0;
+                    let failed = 0;
+
+                    for (const telegramId of broadcast.recipients) {
+                        try {
+                            await notificationBot.telegram.sendMessage(telegramId, broadcast.message, {
+                                parse_mode: 'Markdown'
+                            });
+                            sent++;
+                            await new Promise(resolve => setTimeout(resolve, 50));
+                        } catch (error) {
+                            failed++;
+                            console.log(`Failed to broadcast to ${telegramId}: ${error.message}`);
+                        }
+                    }
+
+                    console.log(`📢 Broadcast complete: ${sent} sent, ${failed} failed`);
+                }
+
+                // Clear the broadcast
+                run(`DELETE FROM settings WHERE key = 'pending_broadcast'`);
+                saveDatabase();
+            }
+
+        } catch (error) {
+            console.error('Notification sender error:', error);
+        }
+    }, 5000);
+}
+
+module.exports = { createBot, startBroadcastSender };

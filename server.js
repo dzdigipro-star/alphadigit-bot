@@ -2,16 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { initDatabase } = require('./database');
-const { createBot } = require('./bot');
+const { initDatabase, getSetting } = require('./database');
+const { createBot, startBroadcastSender } = require('./bot');
 const apiRoutes = require('./api');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Dashboard credentials from environment variables
+// Dashboard credentials - username from env, password from database or env
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'changeme123';
 
 // Basic Auth Middleware for Dashboard
 function basicAuth(req, res, next) {
@@ -28,7 +27,10 @@ function basicAuth(req, res, next) {
     const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
     const [username, password] = credentials.split(':');
 
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
+    // Get password from database settings, fallback to env, then default
+    const storedPassword = getSetting('admin_password') || process.env.ADMIN_PASS || 'changeme123';
+
+    if (username === ADMIN_USER && password === storedPassword) {
         return next();
     }
 
@@ -84,30 +86,52 @@ async function main() {
 
         // Start server
         app.listen(PORT, () => {
-            console.log(`\n🚀 TeleCart Dashboard running at http://localhost:${PORT}\n`);
+            console.log(`\n🚀 AlphaDigit Dashboard running at http://localhost:${PORT}\n`);
         });
 
-        // Start Telegram bot
-        const BOT_TOKEN = process.env.BOT_TOKEN;
+        // Start Telegram bot - use .env first (more reliable), then database
+        const dbToken = getSetting('bot_token');
+        const envToken = process.env.BOT_TOKEN;
+        const BOT_TOKEN = envToken || dbToken; // .env takes priority now
+
+        console.log('🔍 Token source:', envToken ? '.env file' : (dbToken ? 'database' : 'NOT FOUND'));
+        console.log('🔑 Token prefix:', BOT_TOKEN?.substring(0, 15) || 'NONE');
 
         if (!BOT_TOKEN) {
-            console.error('❌ BOT_TOKEN not found in .env file!');
-            process.exit(1);
+            console.error('❌ BOT_TOKEN not found in .env or database!');
+            console.log('👉 Add token to .env file or Dashboard Settings');
+            return; // Don't exit, just skip bot
         }
 
+        console.log('🔄 Starting Telegram bot...');
         const bot = createBot(BOT_TOKEN);
 
-        await bot.launch();
-        console.log('🤖 Telegram Bot is running!\n');
-        console.log('📱 Open your bot: https://t.me/Alpha_Digit_bot\n');
+        try {
+            // Add timeout to bot launch (30 seconds)
+            const launchPromise = bot.launch({ dropPendingUpdates: true });
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Bot launch timed out after 30s')), 30000)
+            );
 
-        // Graceful shutdown
-        process.once('SIGINT', () => bot.stop('SIGINT'));
-        process.once('SIGTERM', () => bot.stop('SIGTERM'));
+            await Promise.race([launchPromise, timeoutPromise]);
+            console.log('🤖 Telegram Bot is running!\n');
+            console.log('📱 Open your bot: https://t.me/Alpha_Digit_bot\n');
+
+            // Start broadcast sender
+            startBroadcastSender(bot);
+            console.log('📢 Broadcast sender active\n');
+
+            // Graceful shutdown
+            process.once('SIGINT', () => bot.stop('SIGINT'));
+            process.once('SIGTERM', () => bot.stop('SIGTERM'));
+        } catch (botError) {
+            console.error('❌ Bot launch failed:', botError.message);
+            console.error('Full error:', botError);
+        }
 
     } catch (error) {
-        console.error('❌ Failed to start:', error);
-        process.exit(1);
+        console.error('❌ Failed to start:', error.message);
+        console.error('Full error:', error);
     }
 }
 

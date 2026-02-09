@@ -1,4 +1,4 @@
-/* TeleCart Dashboard - Premium Dark Theme */
+/* AlphaDigit Dashboard - Premium Dark Theme */
 
 :root {
     /* Colors */
@@ -7,31 +7,31 @@
     --bg-tertiary: #252542;
     --bg-card: #1e1e35;
     --bg-hover: #2a2a4a;
-    
+
     --accent-primary: #8b5cf6;
     --accent-secondary: #a78bfa;
     --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
     --accent-gradient-hover: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
-    
+
     --text-primary: #ffffff;
     --text-secondary: #a1a1aa;
     --text-muted: #71717a;
-    
+
     --success: #22c55e;
     --warning: #f59e0b;
     --danger: #ef4444;
     --info: #3b82f6;
-    
+
     --border-color: rgba(139, 92, 246, 0.2);
     --shadow-color: rgba(0, 0, 0, 0.3);
     --glow: 0 0 20px rgba(139, 92, 246, 0.3);
-    
+
     /* Spacing */
     --sidebar-width: 260px;
     --header-height: 70px;
     --border-radius: 12px;
     --border-radius-sm: 8px;
-    
+
     /* Transitions */
     --transition-fast: 0.15s ease;
     --transition-normal: 0.3s ease;
@@ -379,7 +379,8 @@ table {
     border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
     padding: 14px 16px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
@@ -690,7 +691,9 @@ select.form-control {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .loading-overlay {
@@ -735,6 +738,7 @@ select.form-control {
         transform: translateX(100%);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
@@ -755,16 +759,17 @@ select.form-control {
         transform: translateX(-100%);
         transition: var(--transition-normal);
     }
-    
+
     .sidebar.open {
         transform: translateX(0);
     }
-    
+
     .main-content {
         margin-left: 0;
     }
-    
-    .grid-2, .grid-3 {
+
+    .grid-2,
+    .grid-3 {
         grid-template-columns: 1fr;
     }
 }
@@ -773,11 +778,11 @@ select.form-control {
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .header {
         padding: 0 16px;
     }
-    
+
     .page-content {
         padding: 16px;
     }

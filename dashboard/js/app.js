@@ -1,4 +1,4 @@
-// TeleCart Dashboard - Main JavaScript
+// AlphaDigit Dashboard - Main JavaScript
 
 // Toast notification system
 function showToast(message, type = 'success') {

@@ -94,8 +94,15 @@ function getSetting(key) {
 // Helper function to set settings
 function setSetting(key, value) {
     if (!db) return;
-    db.run(`INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('${key}', '${value}', datetime('now'))`);
-    saveDatabase();
+    try {
+        const stmt = db.prepare(`INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))`);
+        stmt.bind([key, value]);
+        stmt.step();
+        stmt.free();
+        saveDatabase();
+    } catch (error) {
+        console.error('setSetting error:', error);
+    }
 }
 
 // Helper to run query and get results as objects

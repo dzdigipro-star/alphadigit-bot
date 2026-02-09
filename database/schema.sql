@@ -1,4 +1,4 @@
--- TeleCart Database Schema
+-- AlphaDigit Database Schema
 
 -- Categories table (supports subcategories)
 CREATE TABLE IF NOT EXISTS categories (
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS stock_alerts (
 
 -- Insert default settings
 INSERT OR IGNORE INTO settings (key, value) VALUES
-    ('bot_name', 'TeleCart'),
+    ('bot_name', 'AlphaDigit'),
     ('welcome_message', 'Welcome to our digital store! 🛒\n\nBrowse our products and make purchases securely.'),
     ('store_currency', 'USD'),
     ('coinpal_api_key', ''),

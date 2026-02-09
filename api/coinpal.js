@@ -58,7 +58,7 @@ async function createPayment(options) {
         version: '2',
         requestId,
         merchantNo,
-        merchantName: 'TeleCart',
+        merchantName: 'AlphaDigit',
         orderNo,
         orderCurrencyType: 'fiat',
         orderCurrency,
