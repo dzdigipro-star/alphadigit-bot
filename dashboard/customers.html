@@ -70,6 +70,15 @@
             <div class="page-content">
                 <div class="card">
                     <div class="card-body">
+                        <div style="margin-bottom: 16px;">
+                            <div style="position: relative; max-width: 400px;">
+                                <i class="fas fa-search"
+                                    style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                <input type="text" class="form-control" id="customer-search"
+                                    placeholder="Search by name, username or Telegram ID..." oninput="renderCustomers()"
+                                    style="padding-left: 36px;">
+                            </div>
+                        </div>
                         <div class="table-container">
                             <table>
                                 <thead>
@@ -182,21 +191,32 @@
 
         function renderCustomers() {
             const tbody = document.getElementById('customers-table');
+            const searchTerm = (document.getElementById('customer-search').value || '').toLowerCase().trim();
 
-            if (customers.length === 0) {
+            // Filter customers based on search
+            const filtered = searchTerm
+                ? customers.filter(c => {
+                    const name = ((c.first_name || '') + ' ' + (c.last_name || '')).toLowerCase();
+                    const username = (c.username || '').toLowerCase();
+                    const telegramId = (c.telegram_id || '').toString();
+                    return name.includes(searchTerm) || username.includes(searchTerm) || telegramId.includes(searchTerm);
+                })
+                : customers;
+
+            if (filtered.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="8" class="empty-state">
-                            <i class="fas fa-users"></i>
-                            <h3>No customers yet</h3>
-                            <p>Customers will appear here when they start using your bot.</p>
+                            <i class="fas fa-${searchTerm ? 'search' : 'users'}"></i>
+                            <h3>${searchTerm ? 'No customers found' : 'No customers yet'}</h3>
+                            <p>${searchTerm ? 'Try a different search term.' : 'Customers will appear here when they start using your bot.'}</p>
                         </td>
                     </tr>
                 `;
                 return;
             }
 
-            tbody.innerHTML = customers.map(customer => `
+            tbody.innerHTML = filtered.map(customer => `
                 <tr>
                     <td>
                         <strong>${customer.first_name || 'Unknown'} ${customer.last_name || ''}</strong>
