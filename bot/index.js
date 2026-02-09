@@ -9,10 +9,10 @@ function createBot(token) {
     bot.use(async (ctx, next) => {
         if (ctx.from) {
             const telegramId = ctx.from.id.toString();
-            let user = get(`SELECT * FROM customers WHERE telegram_id = ?`, [telegramId]);
+            let user = await get(`SELECT * FROM customers WHERE telegram_id = ?`, [telegramId]);
 
             if (!user) {
-                run(`
+                await run(`
                     INSERT INTO customers (telegram_id, username, first_name, last_name)
                     VALUES (?, ?, ?, ?)
                 `, [
@@ -21,10 +21,10 @@ function createBot(token) {
                     ctx.from.first_name || null,
                     ctx.from.last_name || null
                 ]);
-                user = get(`SELECT * FROM customers WHERE telegram_id = ?`, [telegramId]);
+                user = await get(`SELECT * FROM customers WHERE telegram_id = ?`, [telegramId]);
             } else {
                 // Update last active
-                run(`UPDATE customers SET last_active = datetime('now') WHERE telegram_id = ?`, [telegramId]);
+                await run(`UPDATE customers SET last_active = datetime('now') WHERE telegram_id = ?`, [telegramId]);
             }
 
             ctx.customer = user;
@@ -83,7 +83,7 @@ function createBot(token) {
             `/pay - Add funds to your account\n` +
             `/orders - View your orders\n` +
             `/help - Show this help message\n\n` +
-            `For support, contact the admin.`,
+            `For support, contact the admin @seven_alfa`,
             { parse_mode: 'Markdown' }
         );
     });
@@ -108,7 +108,7 @@ function createBot(token) {
 
         // Refresh customer data from database to get latest flags
         if (ctx.customer) {
-            ctx.customer = get(`SELECT * FROM customers WHERE id = ?`, [ctx.customer.id]);
+            ctx.customer = await get(`SELECT * FROM customers WHERE id = ?`, [ctx.customer.id]);
         }
 
         // Check if user is expecting to enter Binance Order ID
@@ -120,7 +120,7 @@ function createBot(token) {
         // Check if user is expecting to enter custom Binance amount
         if (ctx.customer && ctx.customer.expecting_binance_amount) {
             // Clear the flag
-            run(`UPDATE customers SET expecting_binance_amount = 0 WHERE id = ?`, [ctx.customer.id]);
+            await run(`UPDATE customers SET expecting_binance_amount = 0 WHERE id = ?`, [ctx.customer.id]);
             ctx.customer.expecting_binance_amount = 0;
             saveDatabase();
 
@@ -217,8 +217,8 @@ function createBot(token) {
 }
 
 // Get currency symbol and info
-function getCurrencyInfo() {
-    const currency = getSetting('store_currency') || 'USD';
+async function getCurrencyInfo() {
+    const currency = (await getSetting('store_currency')) || 'USD';
     return {
         code: currency,
         symbol: currency === 'USD' ? '$' : 'DA',
@@ -228,8 +228,8 @@ function getCurrencyInfo() {
 
 // Show main menu with keyboard
 async function showMainMenu(ctx, isEdit = false) {
-    const welcomeMessage = getSetting('welcome_message') || 'Welcome to our store! 🛒';
-    const botName = getSetting('bot_name') || 'AlphaDigit';
+    const welcomeMessage = (await getSetting('welcome_message')) || 'Welcome to our store! 🛒';
+    const botName = (await getSetting('bot_name')) || 'AlphaDigit';
 
     const message = `🛒 *${botName}*\n\n${welcomeMessage}`;
     const keyboard = Markup.keyboard([
@@ -247,7 +247,7 @@ async function showMainMenu(ctx, isEdit = false) {
 
 // Show main categories
 async function showCategories(ctx, isEdit = false) {
-    const categories = query(`
+    const categories = await query(`
         SELECT c.*, 
             (SELECT COUNT(*) FROM categories WHERE parent_id = c.id) as subcategory_count,
             (SELECT COUNT(*) FROM products WHERE category_id = c.id AND is_active = 1) as product_count
@@ -287,7 +287,7 @@ async function showCategories(ctx, isEdit = false) {
 
 // Show subcategories or products
 async function showSubcategoriesOrProducts(ctx, categoryId, isEdit = true) {
-    const category = get(`SELECT * FROM categories WHERE id = ?`, [categoryId]);
+    const category = await get(`SELECT * FROM categories WHERE id = ?`, [categoryId]);
 
     if (!category) {
         await ctx.answerCbQuery('Category not found');
@@ -295,7 +295,7 @@ async function showSubcategoriesOrProducts(ctx, categoryId, isEdit = true) {
     }
 
     // Check for subcategories
-    const subcategories = query(`
+    const subcategories = await query(`
         SELECT * FROM categories 
         WHERE parent_id = ? AND is_active = 1 
         ORDER BY sort_order, name
@@ -324,10 +324,10 @@ async function showSubcategoriesOrProducts(ctx, categoryId, isEdit = true) {
 
 // Show products in a category
 async function showProducts(ctx, categoryId, parentCategoryId) {
-    const category = get(`SELECT * FROM categories WHERE id = ?`, [categoryId]);
-    const currency = getCurrencyInfo();
+    const category = await get(`SELECT * FROM categories WHERE id = ?`, [categoryId]);
+    const currency = await getCurrencyInfo();
 
-    const products = query(`
+    const products = await query(`
         SELECT p.*, 
             (SELECT COUNT(*) FROM product_keys pk WHERE pk.product_id = p.id AND pk.is_sold = 0) as available_stock
         FROM products p 
@@ -362,9 +362,9 @@ async function showProducts(ctx, categoryId, parentCategoryId) {
 
 // Show product details
 async function showProductDetails(ctx, productId) {
-    const currency = getCurrencyInfo();
+    const currency = await getCurrencyInfo();
 
-    const product = get(`
+    const product = await get(`
         SELECT p.*, c.name as category_name,
             (SELECT COUNT(*) FROM product_keys pk WHERE pk.product_id = p.id AND pk.is_sold = 0) as available_stock
         FROM products p 
@@ -414,9 +414,9 @@ async function showProductDetails(ctx, productId) {
 
 // Handle purchase
 async function handlePurchase(ctx, productId) {
-    const currency = getCurrencyInfo();
+    const currency = await getCurrencyInfo();
 
-    const product = get(`
+    const product = await get(`
         SELECT p.*,
             (SELECT COUNT(*) FROM product_keys pk WHERE pk.product_id = p.id AND pk.is_sold = 0) as available_stock
         FROM products p WHERE p.id = ?
@@ -428,7 +428,7 @@ async function handlePurchase(ctx, productId) {
     }
 
     // Refresh customer data
-    ctx.customer = get(`SELECT * FROM customers WHERE telegram_id = ?`, [ctx.from.id.toString()]);
+    ctx.customer = await get(`SELECT * FROM customers WHERE telegram_id = ?`, [ctx.from.id.toString()]);
 
     const stock = product.delivery_type === 'auto' ? product.available_stock : product.stock;
 
@@ -463,7 +463,7 @@ async function handlePurchase(ctx, productId) {
     // Process the purchase
     if (product.delivery_type === 'auto') {
         // Get an available key
-        const key = get(`
+        const key = await get(`
             SELECT * FROM product_keys 
             WHERE product_id = ? AND is_sold = 0 
             LIMIT 1
@@ -476,19 +476,19 @@ async function handlePurchase(ctx, productId) {
 
         // Deduct balance
         if (currency.code === 'USD') {
-            run(`UPDATE customers SET balance_usd = balance_usd - ?, total_spent_usd = total_spent_usd + ? WHERE id = ?`,
+            await run(`UPDATE customers SET balance_usd = balance_usd - ?, total_spent_usd = total_spent_usd + ? WHERE id = ?`,
                 [product.price_usd, product.price_usd, ctx.customer.id]);
         } else {
-            run(`UPDATE customers SET balance_dzd = balance_dzd - ?, total_spent_dzd = total_spent_dzd + ? WHERE id = ?`,
+            await run(`UPDATE customers SET balance_dzd = balance_dzd - ?, total_spent_dzd = total_spent_dzd + ? WHERE id = ?`,
                 [product.price_dzd, product.price_dzd, ctx.customer.id]);
         }
 
         // Mark key as sold
-        run(`UPDATE product_keys SET is_sold = 1, sold_to = ?, sold_at = datetime('now') WHERE id = ?`,
+        await run(`UPDATE product_keys SET is_sold = 1, sold_to = ?, sold_at = datetime('now') WHERE id = ?`,
             [ctx.customer.id, key.id]);
 
         // Create order
-        const orderResult = run(`
+        const orderResult = await run(`
             INSERT INTO orders (customer_id, product_id, product_key_id, quantity, total_usd, total_dzd, status, delivery_type, delivered_data)
             VALUES (?, ?, ?, 1, ?, ?, 'delivered', 'auto', ?)
         `, [ctx.customer.id, productId, key.id, product.price_usd, product.price_dzd || 0, key.key_data]);
@@ -513,7 +513,7 @@ async function handlePurchase(ctx, productId) {
         );
 
         // Check low stock
-        const remainingStock = get(`
+        const remainingStock = await get(`
             SELECT COUNT(*) as count FROM product_keys WHERE product_id = ? AND is_sold = 0
         `, [productId]);
 
@@ -527,18 +527,18 @@ async function handlePurchase(ctx, productId) {
         // Manual delivery
         // Deduct balance
         if (currency.code === 'USD') {
-            run(`UPDATE customers SET balance_usd = balance_usd - ?, total_spent_usd = total_spent_usd + ? WHERE id = ?`,
+            await run(`UPDATE customers SET balance_usd = balance_usd - ?, total_spent_usd = total_spent_usd + ? WHERE id = ?`,
                 [product.price_usd, product.price_usd, ctx.customer.id]);
         } else {
-            run(`UPDATE customers SET balance_dzd = balance_dzd - ?, total_spent_dzd = total_spent_dzd + ? WHERE id = ?`,
+            await run(`UPDATE customers SET balance_dzd = balance_dzd - ?, total_spent_dzd = total_spent_dzd + ? WHERE id = ?`,
                 [product.price_dzd, product.price_dzd, ctx.customer.id]);
         }
 
         // Decrease stock
-        run(`UPDATE products SET stock = stock - 1 WHERE id = ?`, [productId]);
+        await run(`UPDATE products SET stock = stock - 1 WHERE id = ?`, [productId]);
 
         // Create order (pending manual delivery)
-        const orderResult = run(`
+        const orderResult = await run(`
             INSERT INTO orders (customer_id, product_id, quantity, total_usd, total_dzd, status, delivery_type)
             VALUES (?, ?, 1, ?, ?, 'paid', 'manual')
         `, [ctx.customer.id, productId, product.price_usd, product.price_dzd || 0]);
@@ -571,8 +571,8 @@ async function handlePurchase(ctx, productId) {
 // Show balance
 async function showBalance(ctx, isEdit = false) {
     // Refresh customer data
-    ctx.customer = get(`SELECT * FROM customers WHERE telegram_id = ?`, [ctx.from.id.toString()]);
-    const currency = getCurrencyInfo();
+    ctx.customer = await get(`SELECT * FROM customers WHERE telegram_id = ?`, [ctx.from.id.toString()]);
+    const currency = await getCurrencyInfo();
 
     const balance = currency.code === 'USD' ? ctx.customer.balance_usd : (ctx.customer.balance_dzd || 0);
     const totalSpent = currency.code === 'USD' ? ctx.customer.total_spent_usd : (ctx.customer.total_spent_dzd || 0);
@@ -595,9 +595,9 @@ async function showBalance(ctx, isEdit = false) {
 
 // Show orders
 async function showOrders(ctx, isEdit = false) {
-    const currency = getCurrencyInfo();
+    const currency = await getCurrencyInfo();
 
-    const orders = query(`
+    const orders = await query(`
         SELECT o.*, p.name as product_name 
         FROM orders o 
         JOIN products p ON o.product_id = p.id 
@@ -643,7 +643,7 @@ async function showOrders(ctx, isEdit = false) {
 
 // Show payment options
 async function showPaymentOptions(ctx, isEdit = false) {
-    const currency = getCurrencyInfo();
+    const currency = await getCurrencyInfo();
 
     let buttons;
     let paymentInfo;
@@ -732,7 +732,7 @@ async function showCustomAmountPrompt(ctx) {
 
 // Show Binance Pay amount selection
 async function showBinancePayAmounts(ctx) {
-    const binancePayId = getSetting('binance_pay_id');
+    const binancePayId = await getSetting('binance_pay_id');
 
     if (!binancePayId) {
         await ctx.editMessageText(
@@ -772,7 +772,7 @@ async function showBinancePayAmounts(ctx) {
 // Show Binance Pay custom amount prompt
 async function showBinanceCustomPrompt(ctx) {
     // Mark that user is expecting to enter a custom Binance amount
-    run(`UPDATE customers SET expecting_binance_amount = 1 WHERE id = ?`, [ctx.customer.id]);
+    await run(`UPDATE customers SET expecting_binance_amount = 1 WHERE id = ?`, [ctx.customer.id]);
     saveDatabase();
 
     await ctx.editMessageText(
@@ -791,7 +791,7 @@ async function showBinanceCustomPrompt(ctx) {
 
 // Handle Binance Pay - Show payment instructions
 async function handleBinancePayment(ctx, amount) {
-    const binancePayId = getSetting('binance_pay_id');
+    const binancePayId = await getSetting('binance_pay_id');
 
     // Check if this is from a text message (custom amount) or callback
     const isTextMessage = ctx.message && ctx.message.text;
@@ -818,7 +818,7 @@ async function handleBinancePayment(ctx, amount) {
 
     // Create pending payment record with reference ID
     const refId = `BP${Date.now()}`;
-    run(`INSERT INTO payments (customer_id, amount_usd, payment_method, coinpal_order_id, status)
+    await run(`INSERT INTO payments (customer_id, amount_usd, payment_method, coinpal_order_id, status)
          VALUES (?, ?, 'binance', ?, 'pending')`, [ctx.customer.id, amount, refId]);
     saveDatabase();
 
@@ -844,7 +844,7 @@ async function handleBinancePayment(ctx, amount) {
 
 // Show verification prompt - ask user for Order ID
 async function showBinanceVerifyPrompt(ctx, refId) {
-    const payment = get(`SELECT * FROM payments WHERE coinpal_order_id = ?`, [refId]);
+    const payment = await get(`SELECT * FROM payments WHERE coinpal_order_id = ?`, [refId]);
 
     if (!payment || payment.status !== 'pending') {
         await ctx.editMessageText(
@@ -859,7 +859,7 @@ async function showBinanceVerifyPrompt(ctx, refId) {
     }
 
     // Store that this user is expecting to enter Order ID
-    run(`UPDATE customers SET expecting_binance_order_id = ? WHERE id = ?`, [refId, ctx.customer.id]);
+    await run(`UPDATE customers SET expecting_binance_order_id = ? WHERE id = ?`, [refId, ctx.customer.id]);
     saveDatabase();
 
     await ctx.editMessageText(
@@ -878,10 +878,10 @@ async function showBinanceVerifyPrompt(ctx, refId) {
 // Verify Binance Order ID - auto-credit or submit for review
 async function verifyBinanceOrderId(ctx, orderId) {
     const refId = ctx.customer.expecting_binance_order_id;
-    const payment = get(`SELECT * FROM payments WHERE coinpal_order_id = ? AND status = 'pending'`, [refId]);
+    const payment = await get(`SELECT * FROM payments WHERE coinpal_order_id = ? AND status = 'pending'`, [refId]);
 
     // Clear the expecting flag
-    run(`UPDATE customers SET expecting_binance_order_id = NULL WHERE id = ?`, [ctx.customer.id]);
+    await run(`UPDATE customers SET expecting_binance_order_id = NULL WHERE id = ?`, [ctx.customer.id]);
     ctx.customer.expecting_binance_order_id = null;
     saveDatabase();
 
@@ -891,7 +891,7 @@ async function verifyBinanceOrderId(ctx, orderId) {
     }
 
     // SECURITY: Check if this Order ID was already used
-    const existingPayment = get(`SELECT * FROM payments WHERE transaction_hash = ? AND status = 'verified'`, [orderId.trim()]);
+    const existingPayment = await get(`SELECT * FROM payments WHERE transaction_hash = ? AND status = 'verified'`, [orderId.trim()]);
     if (existingPayment) {
         await ctx.reply(
             `❌ *Order ID Already Used*\n\n` +
@@ -904,12 +904,12 @@ async function verifyBinanceOrderId(ctx, orderId) {
     }
 
     // Save the Order ID
-    run(`UPDATE payments SET transaction_hash = ? WHERE id = ?`, [orderId.trim(), payment.id]);
+    await run(`UPDATE payments SET transaction_hash = ? WHERE id = ?`, [orderId.trim(), payment.id]);
     saveDatabase();
 
     // Try API verification if credentials are configured
-    const apiKey = getSetting('binance_api_key');
-    const apiSecret = getSetting('binance_api_secret');
+    const apiKey = await getSetting('binance_api_key');
+    const apiSecret = await getSetting('binance_api_secret');
 
     if (apiKey && apiSecret) {
         await ctx.reply(`⏳ Verifying payment... Please wait.`);
@@ -929,14 +929,14 @@ async function verifyBinanceOrderId(ctx, orderId) {
 
             if (result.success && result.verified) {
                 // Auto-credit balance!
-                run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`,
+                await run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`,
                     [payment.amount_usd, payment.customer_id]);
-                run(`UPDATE payments SET status = 'verified', verified_at = datetime('now') WHERE id = ?`,
+                await run(`UPDATE payments SET status = 'verified', verified_at = datetime('now') WHERE id = ?`,
                     [payment.id]);
                 saveDatabase();
 
                 // Refresh customer data
-                ctx.customer = get(`SELECT * FROM customers WHERE id = ?`, [ctx.customer.id]);
+                ctx.customer = await get(`SELECT * FROM customers WHERE id = ?`, [ctx.customer.id]);
 
                 await ctx.reply(
                     `✅ *Payment Verified!*\n\n` +
@@ -1055,7 +1055,7 @@ async function handleCryptoPayment(ctx, amount) {
 
         if (result.success && result.payUrl) {
             // Save payment record
-            run(`
+            await run(`
                 INSERT INTO payments (customer_id, amount_usd, payment_method, coinpal_order_id, status)
                 VALUES (?, ?, 'cryptopay', ?, 'pending')
             `, [ctx.customer.id, amount, result.invoiceId.toString()]);
@@ -1141,18 +1141,18 @@ async function checkCryptoPaymentStatus(ctx, invoiceId) {
 
         if (status === 'paid') {
             // Check if already credited
-            const payment = get(`SELECT * FROM payments WHERE coinpal_order_id = ?`, [invoiceId.toString()]);
+            const payment = await get(`SELECT * FROM payments WHERE coinpal_order_id = ?`, [invoiceId.toString()]);
 
             if (payment && payment.status === 'pending') {
                 // Credit the balance
-                run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`,
+                await run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`,
                     [payment.amount_usd, payment.customer_id]);
-                run(`UPDATE payments SET status = 'verified', verified_at = datetime('now') WHERE id = ?`,
+                await run(`UPDATE payments SET status = 'verified', verified_at = datetime('now') WHERE id = ?`,
                     [payment.id]);
                 saveDatabase();
 
                 // Refresh customer data
-                ctx.customer = get(`SELECT * FROM customers WHERE telegram_id = ?`, [ctx.from.id.toString()]);
+                ctx.customer = await get(`SELECT * FROM customers WHERE telegram_id = ?`, [ctx.from.id.toString()]);
 
                 await ctx.editMessageText(
                     `✅ *Payment Confirmed!*\n\n` +
@@ -1218,8 +1218,8 @@ async function checkCryptoPaymentStatus(ctx, invoiceId) {
 
 // Show BaridiMob payment details
 async function showBaridimobPayment(ctx) {
-    const rip = getSetting('baridimob_rip') || 'Not configured';
-    const name = getSetting('baridimob_name') || 'Not configured';
+    const rip = (await getSetting('baridimob_rip')) || 'Not configured';
+    const name = (await getSetting('baridimob_name')) || 'Not configured';
 
     await ctx.editMessageText(
         `🏦 *BaridiMob Payment*\n\n` +
@@ -1248,7 +1248,7 @@ function startBroadcastSender(bot) {
     setInterval(async () => {
         try {
             // Process delivery notifications
-            const pendingNotifications = getSetting('pending_notifications');
+            const pendingNotifications = await getSetting('pending_notifications');
             if (pendingNotifications) {
                 let notifications = [];
                 try {
@@ -1283,13 +1283,13 @@ function startBroadcastSender(bot) {
                     }
 
                     // Clear notifications
-                    run(`DELETE FROM settings WHERE key = 'pending_notifications'`);
+                    await run(`DELETE FROM settings WHERE key = 'pending_notifications'`);
                     saveDatabase();
                 }
             }
 
             // Process broadcasts
-            const pendingBroadcast = getSetting('pending_broadcast');
+            const pendingBroadcast = await getSetting('pending_broadcast');
             if (pendingBroadcast) {
                 const broadcast = JSON.parse(pendingBroadcast);
                 if (broadcast.recipients && broadcast.recipients.length > 0) {
@@ -1315,7 +1315,7 @@ function startBroadcastSender(bot) {
                 }
 
                 // Clear the broadcast
-                run(`DELETE FROM settings WHERE key = 'pending_broadcast'`);
+                await run(`DELETE FROM settings WHERE key = 'pending_broadcast'`);
                 saveDatabase();
             }
 

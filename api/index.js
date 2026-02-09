@@ -7,14 +7,14 @@ const router = express.Router();
 // DASHBOARD STATS
 // =====================
 
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
     try {
-        const totalRevenueResult = get(`SELECT COALESCE(SUM(total_usd), 0) as total FROM orders WHERE status IN ('paid', 'delivered')`);
-        const totalOrdersResult = get(`SELECT COUNT(*) as count FROM orders`);
-        const todayOrdersResult = get(`SELECT COUNT(*) as count FROM orders WHERE date(created_at) = date('now')`);
-        const totalCustomersResult = get(`SELECT COUNT(*) as count FROM customers`);
-        const activeCustomersResult = get(`SELECT COUNT(*) as count FROM customers WHERE date(last_active) >= date('now', '-7 days')`);
-        const pendingOrdersResult = get(`SELECT COUNT(*) as count FROM orders WHERE status = 'paid'`);
+        const totalRevenueResult = await get(`SELECT COALESCE(SUM(total_usd), 0) as total FROM orders WHERE status IN ('paid', 'delivered')`);
+        const totalOrdersResult = await get(`SELECT COUNT(*) as count FROM orders`);
+        const todayOrdersResult = await get(`SELECT COUNT(*) as count FROM orders WHERE date(created_at) = date('now')`);
+        const totalCustomersResult = await get(`SELECT COUNT(*) as count FROM customers`);
+        const activeCustomersResult = await get(`SELECT COUNT(*) as count FROM customers WHERE date(last_active) >= date('now', '-7 days')`);
+        const pendingOrdersResult = await get(`SELECT COUNT(*) as count FROM orders WHERE status = 'paid'`);
 
         const stats = {
             totalRevenue: totalRevenueResult ? totalRevenueResult.total : 0,
@@ -28,7 +28,7 @@ router.get('/stats', (req, res) => {
         };
 
         // Get all products with their stock
-        const products = query(`
+        const products = await query(`
             SELECT p.*, 
                 (SELECT COUNT(*) FROM product_keys pk WHERE pk.product_id = p.id AND pk.is_sold = 0) as available_keys
             FROM products p
@@ -47,7 +47,7 @@ router.get('/stats', (req, res) => {
         });
 
         // Recent orders
-        stats.recentOrders = query(`
+        stats.recentOrders = await query(`
             SELECT o.*, p.name as product_name, c.username, c.first_name, c.telegram_id
             FROM orders o
             JOIN products p ON o.product_id = p.id
@@ -67,9 +67,9 @@ router.get('/stats', (req, res) => {
 // CATEGORIES
 // =====================
 
-router.get('/categories', (req, res) => {
+router.get('/categories', async (req, res) => {
     try {
-        const categories = query(`
+        const categories = await query(`
             SELECT c.*, 
                 pc.name as parent_name,
                 (SELECT COUNT(*) FROM categories WHERE parent_id = c.id) as subcategory_count,
@@ -84,9 +84,9 @@ router.get('/categories', (req, res) => {
     }
 });
 
-router.get('/categories/:id', (req, res) => {
+router.get('/categories/:id', async (req, res) => {
     try {
-        const category = get(`SELECT * FROM categories WHERE id = ?`, [parseInt(req.params.id)]);
+        const category = await get(`SELECT * FROM categories WHERE id = ?`, [parseInt(req.params.id)]);
         if (!category) {
             return res.status(404).json({ error: 'Category not found' });
         }
@@ -96,10 +96,10 @@ router.get('/categories/:id', (req, res) => {
     }
 });
 
-router.post('/categories', (req, res) => {
+router.post('/categories', async (req, res) => {
     try {
         const { name, emoji, parent_id, sort_order } = req.body;
-        const result = run(`
+        const result = await run(`
             INSERT INTO categories (name, emoji, parent_id, sort_order)
             VALUES (?, ?, ?, ?)
         `, [name, emoji || '📁', parent_id || null, sort_order || 0]);
@@ -110,10 +110,10 @@ router.post('/categories', (req, res) => {
     }
 });
 
-router.put('/categories/:id', (req, res) => {
+router.put('/categories/:id', async (req, res) => {
     try {
         const { name, emoji, parent_id, sort_order, is_active } = req.body;
-        run(`
+        await run(`
             UPDATE categories 
             SET name = ?, emoji = ?, parent_id = ?, sort_order = ?, is_active = ?
             WHERE id = ?
@@ -125,9 +125,9 @@ router.put('/categories/:id', (req, res) => {
     }
 });
 
-router.delete('/categories/:id', (req, res) => {
+router.delete('/categories/:id', async (req, res) => {
     try {
-        run(`DELETE FROM categories WHERE id = ?`, [parseInt(req.params.id)]);
+        await run(`DELETE FROM categories WHERE id = ?`, [parseInt(req.params.id)]);
         res.json({ message: 'Category deleted' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -138,9 +138,9 @@ router.delete('/categories/:id', (req, res) => {
 // PRODUCTS
 // =====================
 
-router.get('/products', (req, res) => {
+router.get('/products', async (req, res) => {
     try {
-        const products = query(`
+        const products = await query(`
             SELECT p.*, c.name as category_name,
                 (SELECT COUNT(*) FROM product_keys pk WHERE pk.product_id = p.id AND pk.is_sold = 0) as available_keys
             FROM products p
@@ -153,9 +153,9 @@ router.get('/products', (req, res) => {
     }
 });
 
-router.get('/products/:id', (req, res) => {
+router.get('/products/:id', async (req, res) => {
     try {
-        const product = get(`
+        const product = await get(`
             SELECT p.*, c.name as category_name,
                 (SELECT COUNT(*) FROM product_keys pk WHERE pk.product_id = p.id AND pk.is_sold = 0) as available_keys
             FROM products p
@@ -168,7 +168,7 @@ router.get('/products/:id', (req, res) => {
         }
 
         // Get keys for this product
-        product.keys = query(`
+        product.keys = await query(`
             SELECT * FROM product_keys WHERE product_id = ? ORDER BY is_sold, created_at DESC
         `, [parseInt(req.params.id)]);
 
@@ -178,14 +178,14 @@ router.get('/products/:id', (req, res) => {
     }
 });
 
-router.post('/products', (req, res) => {
+router.post('/products', async (req, res) => {
     try {
         const { category_id, name, description, price_usd, validity, notes, delivery_type, stock } = req.body;
 
-        const rate = parseFloat(getSetting('usd_to_dzd_rate')) || 135;
+        const rate = parseFloat(await getSetting('usd_to_dzd_rate')) || 135;
         const price_dzd = price_usd * rate;
 
-        const result = run(`
+        const result = await run(`
             INSERT INTO products (category_id, name, description, price_usd, price_dzd, validity, notes, delivery_type, stock)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [category_id, name, description, price_usd, price_dzd, validity, notes, delivery_type || 'auto', stock || 0]);
@@ -196,14 +196,14 @@ router.post('/products', (req, res) => {
     }
 });
 
-router.put('/products/:id', (req, res) => {
+router.put('/products/:id', async (req, res) => {
     try {
         const { category_id, name, description, price_usd, validity, notes, delivery_type, stock, is_active } = req.body;
 
-        const rate = parseFloat(getSetting('usd_to_dzd_rate')) || 135;
+        const rate = parseFloat(await getSetting('usd_to_dzd_rate')) || 135;
         const price_dzd = price_usd * rate;
 
-        run(`
+        await run(`
             UPDATE products 
             SET category_id = ?, name = ?, description = ?, price_usd = ?, price_dzd = ?, 
                 validity = ?, notes = ?, delivery_type = ?, stock = ?, is_active = ?,
@@ -217,9 +217,9 @@ router.put('/products/:id', (req, res) => {
     }
 });
 
-router.delete('/products/:id', (req, res) => {
+router.delete('/products/:id', async (req, res) => {
     try {
-        run(`DELETE FROM products WHERE id = ?`, [parseInt(req.params.id)]);
+        await run(`DELETE FROM products WHERE id = ?`, [parseInt(req.params.id)]);
         res.json({ message: 'Product deleted' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -227,13 +227,13 @@ router.delete('/products/:id', (req, res) => {
 });
 
 // Product Keys
-router.post('/products/:id/keys', (req, res) => {
+router.post('/products/:id/keys', async (req, res) => {
     try {
         const { keys } = req.body; // Array of key strings
         const productId = parseInt(req.params.id);
 
         for (const key of keys) {
-            run(`INSERT INTO product_keys (product_id, key_data) VALUES (?, ?)`, [productId, key.trim()]);
+            await run(`INSERT INTO product_keys (product_id, key_data) VALUES (?, ?)`, [productId, key.trim()]);
         }
 
         res.json({ message: `${keys.length} keys added` });
@@ -242,9 +242,9 @@ router.post('/products/:id/keys', (req, res) => {
     }
 });
 
-router.delete('/products/:productId/keys/:keyId', (req, res) => {
+router.delete('/products/:productId/keys/:keyId', async (req, res) => {
     try {
-        run(`DELETE FROM product_keys WHERE id = ? AND product_id = ?`, [parseInt(req.params.keyId), parseInt(req.params.productId)]);
+        await run(`DELETE FROM product_keys WHERE id = ? AND product_id = ?`, [parseInt(req.params.keyId), parseInt(req.params.productId)]);
         res.json({ message: 'Key deleted' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -255,9 +255,9 @@ router.delete('/products/:productId/keys/:keyId', (req, res) => {
 // ORDERS
 // =====================
 
-router.get('/orders', (req, res) => {
+router.get('/orders', async (req, res) => {
     try {
-        const orders = query(`
+        const orders = await query(`
             SELECT o.*, p.name as product_name, c.username, c.first_name, c.telegram_id
             FROM orders o
             JOIN products p ON o.product_id = p.id
@@ -270,9 +270,9 @@ router.get('/orders', (req, res) => {
     }
 });
 
-router.get('/orders/:id', (req, res) => {
+router.get('/orders/:id', async (req, res) => {
     try {
-        const order = get(`
+        const order = await get(`
             SELECT o.*, p.name as product_name, c.username, c.first_name, c.telegram_id
             FROM orders o
             JOIN products p ON o.product_id = p.id
@@ -289,13 +289,13 @@ router.get('/orders/:id', (req, res) => {
     }
 });
 
-router.put('/orders/:id', (req, res) => {
+router.put('/orders/:id', async (req, res) => {
     try {
         const { status, delivered_data } = req.body;
         const orderId = parseInt(req.params.id);
 
         // Get order details including customer Telegram ID
-        const order = get(`
+        const order = await get(`
             SELECT o.*, c.telegram_id, p.name as product_name
             FROM orders o
             JOIN customers c ON o.customer_id = c.id
@@ -308,7 +308,7 @@ router.put('/orders/:id', (req, res) => {
         }
 
         // Update order in database
-        run(`
+        await run(`
             UPDATE orders SET status = ?, delivered_data = ?, updated_at = datetime('now')
             WHERE id = ?
         `, [status, delivered_data, orderId]);
@@ -327,7 +327,7 @@ router.put('/orders/:id', (req, res) => {
 
             // Get existing notifications or create new array
             let notifications = [];
-            const existing = getSetting('pending_notifications');
+            const existing = await getSetting('pending_notifications');
             if (existing) {
                 try {
                     notifications = JSON.parse(existing);
@@ -336,8 +336,7 @@ router.put('/orders/:id', (req, res) => {
                 }
             }
             notifications.push(notification);
-            setSetting('pending_notifications', JSON.stringify(notifications));
-            saveDatabase();
+            await setSetting('pending_notifications', JSON.stringify(notifications));
         }
 
         res.json({ message: 'Order updated' });
@@ -350,9 +349,9 @@ router.put('/orders/:id', (req, res) => {
 // CUSTOMERS
 // =====================
 
-router.get('/customers', (req, res) => {
+router.get('/customers', async (req, res) => {
     try {
-        const customers = query(`
+        const customers = await query(`
             SELECT c.*,
                 (SELECT COUNT(*) FROM orders WHERE customer_id = c.id) as order_count
             FROM customers c
@@ -364,14 +363,14 @@ router.get('/customers', (req, res) => {
     }
 });
 
-router.get('/customers/:id', (req, res) => {
+router.get('/customers/:id', async (req, res) => {
     try {
-        const customer = get(`SELECT * FROM customers WHERE id = ?`, [parseInt(req.params.id)]);
+        const customer = await get(`SELECT * FROM customers WHERE id = ?`, [parseInt(req.params.id)]);
         if (!customer) {
             return res.status(404).json({ error: 'Customer not found' });
         }
 
-        customer.orders = query(`
+        customer.orders = await query(`
             SELECT o.*, p.name as product_name
             FROM orders o
             JOIN products p ON o.product_id = p.id
@@ -385,14 +384,14 @@ router.get('/customers/:id', (req, res) => {
     }
 });
 
-router.put('/customers/:id/balance', (req, res) => {
+router.put('/customers/:id/balance', async (req, res) => {
     try {
         const { amount, action } = req.body; // action: 'add' or 'set'
 
         if (action === 'add') {
-            run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`, [amount, parseInt(req.params.id)]);
+            await run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`, [amount, parseInt(req.params.id)]);
         } else {
-            run(`UPDATE customers SET balance_usd = ? WHERE id = ?`, [amount, parseInt(req.params.id)]);
+            await run(`UPDATE customers SET balance_usd = ? WHERE id = ?`, [amount, parseInt(req.params.id)]);
         }
 
         res.json({ message: 'Balance updated' });
@@ -401,10 +400,10 @@ router.put('/customers/:id/balance', (req, res) => {
     }
 });
 
-router.put('/customers/:id/ban', (req, res) => {
+router.put('/customers/:id/ban', async (req, res) => {
     try {
         const { is_banned } = req.body;
-        run(`UPDATE customers SET is_banned = ? WHERE id = ?`, [is_banned ? 1 : 0, parseInt(req.params.id)]);
+        await run(`UPDATE customers SET is_banned = ? WHERE id = ?`, [is_banned ? 1 : 0, parseInt(req.params.id)]);
         res.json({ message: is_banned ? 'Customer banned' : 'Customer unbanned' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -415,9 +414,9 @@ router.put('/customers/:id/ban', (req, res) => {
 // PAYMENTS
 // =====================
 
-router.get('/payments', (req, res) => {
+router.get('/payments', async (req, res) => {
     try {
-        const payments = query(`
+        const payments = await query(`
             SELECT p.*, c.username, c.first_name, c.telegram_id
             FROM payments p
             JOIN customers c ON p.customer_id = c.id
@@ -429,10 +428,10 @@ router.get('/payments', (req, res) => {
     }
 });
 
-router.put('/payments/:id/verify', (req, res) => {
+router.put('/payments/:id/verify', async (req, res) => {
     try {
         const { status, admin_notes } = req.body;
-        const payment = get(`SELECT * FROM payments WHERE id = ?`, [parseInt(req.params.id)]);
+        const payment = await get(`SELECT * FROM payments WHERE id = ?`, [parseInt(req.params.id)]);
 
         if (!payment) {
             return res.status(404).json({ error: 'Payment not found' });
@@ -440,10 +439,10 @@ router.put('/payments/:id/verify', (req, res) => {
 
         if (status === 'verified' && payment.status !== 'verified') {
             // Add balance to customer
-            run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`, [payment.amount_usd, payment.customer_id]);
+            await run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`, [payment.amount_usd, payment.customer_id]);
         }
 
-        run(`
+        await run(`
             UPDATE payments SET status = ?, admin_notes = ?, verified_at = datetime('now')
             WHERE id = ?
         `, [status, admin_notes, parseInt(req.params.id)]);
@@ -470,8 +469,8 @@ router.post('/coinpal/create-payment', async (req, res) => {
         }
 
         // Use .env credentials first, fallback to database settings
-        const merchantNo = process.env.COINPAL_API_KEY || getSetting('coinpal_api_key');
-        const secretKey = process.env.COINPAL_API_SECRET || getSetting('coinpal_api_secret');
+        const merchantNo = process.env.COINPAL_API_KEY || await getSetting('coinpal_api_key');
+        const secretKey = process.env.COINPAL_API_SECRET || await getSetting('coinpal_api_secret');
         const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:3000';
 
         if (!merchantNo || !secretKey) {
@@ -481,9 +480,9 @@ router.post('/coinpal/create-payment', async (req, res) => {
         // Find customer by ID or Telegram ID
         let customer;
         if (customerId) {
-            customer = get(`SELECT * FROM customers WHERE id = ?`, [parseInt(customerId)]);
+            customer = await get(`SELECT * FROM customers WHERE id = ?`, [parseInt(customerId)]);
         } else if (telegramId) {
-            customer = get(`SELECT * FROM customers WHERE telegram_id = ?`, [telegramId.toString()]);
+            customer = await get(`SELECT * FROM customers WHERE telegram_id = ?`, [telegramId.toString()]);
         }
 
         if (!customer) {
@@ -502,11 +501,10 @@ router.post('/coinpal/create-payment', async (req, res) => {
 
         if (result.success) {
             // Store payment record
-            run(`
+            await run(`
                 INSERT INTO payments (customer_id, amount_usd, payment_method, coinpal_order_id, status)
                 VALUES (?, ?, 'coinpal', ?, 'pending')
             `, [customer.id, parseFloat(amount), result.orderNo]);
-            saveDatabase();
 
             res.json({
                 success: true,
@@ -526,10 +524,10 @@ router.post('/coinpal/create-payment', async (req, res) => {
 });
 
 // CoinPal webhook handler
-router.post('/coinpal/webhook', (req, res) => {
+router.post('/coinpal/webhook', async (req, res) => {
     try {
         const payload = req.body;
-        const secretKey = getSetting('coinpal_api_secret');
+        const secretKey = await getSetting('coinpal_api_secret');
 
         console.log('CoinPal webhook received:', payload);
 
@@ -542,7 +540,7 @@ router.post('/coinpal/webhook', (req, res) => {
         const { orderNo, orderStatus, orderAmount } = payload;
 
         // Find the payment
-        const payment = get(`SELECT * FROM payments WHERE coinpal_order_id = ?`, [orderNo]);
+        const payment = await get(`SELECT * FROM payments WHERE coinpal_order_id = ?`, [orderNo]);
 
         if (!payment) {
             console.log('Payment not found for order:', orderNo);
@@ -557,18 +555,16 @@ router.post('/coinpal/webhook', (req, res) => {
         // Process successful payment
         if (orderStatus === 'PAID' || orderStatus === 'SUCCESS' || orderStatus === 'COMPLETED') {
             // Credit customer balance
-            run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`,
+            await run(`UPDATE customers SET balance_usd = balance_usd + ? WHERE id = ?`,
                 [payment.amount_usd, payment.customer_id]);
 
             // Update payment status
-            run(`UPDATE payments SET status = 'verified', verified_at = datetime('now') WHERE id = ?`,
+            await run(`UPDATE payments SET status = 'verified', verified_at = datetime('now') WHERE id = ?`,
                 [payment.id]);
 
             console.log(`✅ Payment ${orderNo} verified. Credited $${payment.amount_usd} to customer ${payment.customer_id}`);
-
-            saveDatabase();
         } else if (orderStatus === 'EXPIRED' || orderStatus === 'CANCELLED') {
-            run(`UPDATE payments SET status = 'rejected', admin_notes = ? WHERE id = ?`,
+            await run(`UPDATE payments SET status = 'rejected', admin_notes = ? WHERE id = ?`,
                 [orderStatus, payment.id]);
         }
 
@@ -583,9 +579,9 @@ router.post('/coinpal/webhook', (req, res) => {
 // SETTINGS
 // =====================
 
-router.get('/settings', (req, res) => {
+router.get('/settings', async (req, res) => {
     try {
-        const settings = query(`SELECT * FROM settings`);
+        const settings = await query(`SELECT * FROM settings`);
         const settingsObj = {};
         settings.forEach(s => settingsObj[s.key] = s.value);
         res.json(settingsObj);
@@ -594,7 +590,7 @@ router.get('/settings', (req, res) => {
     }
 });
 
-router.put('/settings', (req, res) => {
+router.put('/settings', async (req, res) => {
     try {
         const settings = req.body;
         console.log('📝 Saving settings:', Object.keys(settings));
@@ -602,9 +598,8 @@ router.put('/settings', (req, res) => {
             console.log('🔑 Bot token received:', settings.bot_token.substring(0, 10) + '...');
         }
         for (const [key, value] of Object.entries(settings)) {
-            setSetting(key, value);
+            await setSetting(key, value);
         }
-        saveDatabase(); // Persist changes to disk
         console.log('✅ Settings saved to database');
         res.json({ message: 'Settings updated' });
     } catch (error) {
@@ -617,12 +612,12 @@ router.put('/settings', (req, res) => {
 // ADMIN PASSWORD
 // =====================
 
-router.put('/admin/password', (req, res) => {
+router.put('/admin/password', async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
         // Get current password from settings
-        const storedPass = getSetting('admin_password') || 'changeme123';
+        const storedPass = (await getSetting('admin_password')) || 'changeme123';
 
         if (currentPassword !== storedPass) {
             return res.status(401).json({ error: 'Current password is incorrect' });
@@ -632,8 +627,7 @@ router.put('/admin/password', (req, res) => {
             return res.status(400).json({ error: 'New password must be at least 6 characters' });
         }
 
-        setSetting('admin_password', newPassword);
-        saveDatabase();
+        await setSetting('admin_password', newPassword);
 
         res.json({ message: 'Password updated successfully' });
     } catch (error) {
@@ -656,19 +650,18 @@ router.post('/broadcast', async (req, res) => {
         // Get all customers
         let customers;
         if (includeInactive) {
-            customers = query(`SELECT telegram_id FROM customers WHERE is_banned = 0`);
+            customers = await query(`SELECT telegram_id FROM customers WHERE is_banned = 0`);
         } else {
             // Only active customers (active in last 30 days)
-            customers = query(`SELECT telegram_id FROM customers WHERE is_banned = 0 AND date(last_active) >= date('now', '-30 days')`);
+            customers = await query(`SELECT telegram_id FROM customers WHERE is_banned = 0 AND date(last_active) >= date('now', '-30 days')`);
         }
 
         // Store broadcast for the bot to send
-        setSetting('pending_broadcast', JSON.stringify({
+        await setSetting('pending_broadcast', JSON.stringify({
             message: message,
             recipients: customers.map(c => c.telegram_id),
             created_at: new Date().toISOString()
         }));
-        saveDatabase();
 
         res.json({
             message: 'Broadcast queued',

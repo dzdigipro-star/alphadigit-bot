@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 
 // Basic Auth Middleware for Dashboard
-function basicAuth(req, res, next) {
+async function basicAuth(req, res, next) {
     // Skip auth for health check
     if (req.path === '/health') return next();
 
@@ -28,7 +28,7 @@ function basicAuth(req, res, next) {
     const [username, password] = credentials.split(':');
 
     // Get password from database settings, fallback to env, then default
-    const storedPassword = getSetting('admin_password') || process.env.ADMIN_PASS || 'changeme123';
+    const storedPassword = (await getSetting('admin_password')) || process.env.ADMIN_PASS || 'changeme123';
 
     if (username === ADMIN_USER && password === storedPassword) {
         return next();
@@ -90,7 +90,7 @@ async function main() {
         });
 
         // Start Telegram bot - use .env first (more reliable), then database
-        const dbToken = getSetting('bot_token');
+        const dbToken = await getSetting('bot_token');
         const envToken = process.env.BOT_TOKEN;
         const BOT_TOKEN = envToken || dbToken; // .env takes priority now
 
