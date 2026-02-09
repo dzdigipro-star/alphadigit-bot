@@ -107,19 +107,14 @@ async function main() {
         const bot = createBot(BOT_TOKEN);
 
         try {
-            // Add timeout to bot launch (30 seconds)
-            const launchPromise = bot.launch({ dropPendingUpdates: true });
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Bot launch timed out after 30s')), 30000)
-            );
-
-            await Promise.race([launchPromise, timeoutPromise]);
-            console.log('🤖 Telegram Bot is running!\n');
-            console.log('📱 Open your bot: https://t.me/Alpha_Digit_bot\n');
-
-            // Start broadcast sender
+            // Start broadcast sender first (it will wait for bot to be ready)
             startBroadcastSender(bot);
-            console.log('📢 Broadcast sender active\n');
+            console.log('📢 Broadcast sender initialized');
+
+            // Launch bot without timeout - let it complete naturally
+            await bot.launch({ dropPendingUpdates: true });
+            console.log('🤖 Telegram Bot is running!\n');
+            console.log('📱 Open your bot: https://t.me/Alpha_DigiPro_bot\n');
 
             // Graceful shutdown
             process.once('SIGINT', () => bot.stop('SIGINT'));
