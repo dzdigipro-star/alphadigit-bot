@@ -113,6 +113,15 @@
                             <textarea class="form-control" id="welcome_message" rows="4"
                                 placeholder="Welcome message shown to new users..."></textarea>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Support Agent Username <small
+                                    style="color: var(--text-muted);">(shown in Help message)</small></label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: var(--text-muted); font-size: 16px;">@</span>
+                                <input type="text" class="form-control" id="support_agent"
+                                    placeholder="username (without @)">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -351,6 +360,7 @@
                 document.getElementById('binance_api_secret').value = settings.binance_api_secret || '';
                 document.getElementById('baridimob_rip').value = settings.baridimob_rip || '';
                 document.getElementById('baridimob_name').value = settings.baridimob_name || '';
+                document.getElementById('support_agent').value = settings.support_agent || '';
 
                 togglePaymentSettings();
             } catch (error) {
@@ -370,7 +380,8 @@
                 binance_api_key: document.getElementById('binance_api_key').value,
                 binance_api_secret: document.getElementById('binance_api_secret').value,
                 baridimob_rip: document.getElementById('baridimob_rip').value,
-                baridimob_name: document.getElementById('baridimob_name').value
+                baridimob_name: document.getElementById('baridimob_name').value,
+                support_agent: document.getElementById('support_agent').value
             };
 
             // Only include bot_token if user entered a new one

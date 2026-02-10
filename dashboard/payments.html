@@ -91,6 +91,15 @@
                 <!-- Payments Table -->
                 <div class="card">
                     <div class="card-body">
+                        <div style="margin-bottom: 16px;">
+                            <div style="position: relative; max-width: 400px;">
+                                <i class="fas fa-search"
+                                    style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                <input type="text" class="form-control" id="payment-search"
+                                    placeholder="Search by username or order ID..." oninput="renderPayments()"
+                                    style="padding-left: 36px;">
+                            </div>
+                        </div>
                         <div class="table-container">
                             <table>
                                 <thead>
@@ -191,18 +200,30 @@
 
         function renderPayments() {
             const tbody = document.getElementById('payments-table');
+            const searchTerm = (document.getElementById('payment-search').value || '').toLowerCase().trim();
             let payments = allPayments;
 
             if (currentFilter !== 'all') {
-                payments = allPayments.filter(p => p.status === currentFilter);
+                payments = payments.filter(p => p.status === currentFilter);
+            }
+
+            if (searchTerm) {
+                payments = payments.filter(p => {
+                    const name = (p.first_name || '').toLowerCase();
+                    const username = (p.username || '').toLowerCase();
+                    const telegramId = (p.telegram_id || '').toString();
+                    const orderId = (p.transaction_hash || p.coinpal_order_id || '').toLowerCase();
+                    return name.includes(searchTerm) || username.includes(searchTerm) || telegramId.includes(searchTerm) || orderId.includes(searchTerm);
+                });
             }
 
             if (payments.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="8" class="empty-state">
-                            <i class="fas fa-credit-card"></i>
-                            <h3>No ${currentFilter === 'all' ? '' : currentFilter} payments</h3>
+                            <i class="fas fa-${searchTerm ? 'search' : 'credit-card'}"></i>
+                            <h3>${searchTerm ? 'No payments found' : `No ${currentFilter === 'all' ? '' : currentFilter} payments`}</h3>
+                            <p>${searchTerm ? 'Try a different search term.' : ''}</p>
                         </td>
                     </tr>
                 `;

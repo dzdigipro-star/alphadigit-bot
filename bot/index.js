@@ -73,33 +73,30 @@ function createBot(token) {
         await showPaymentOptions(ctx);
     });
 
-    // /help command
-    bot.command('help', async (ctx) => {
-        await ctx.reply(
-            `❓ *Help & Commands*\n\n` +
+    // Help message builder
+    async function getHelpMessage() {
+        const supportAgent = await getSetting('support_agent');
+        const supportLine = supportAgent
+            ? `For support, contact @${supportAgent}`
+            : `For support, contact the admin.`;
+
+        return `❓ *Help & Commands*\n\n` +
             `/start - Start the bot\n` +
             `/browse - Browse all products\n` +
             `/balance - Check your balance\n` +
             `/pay - Add funds to your account\n` +
             `/orders - View your orders\n` +
             `/help - Show this help message\n\n` +
-            `For support, contact the admin @seven_alfa`,
-            { parse_mode: 'Markdown' }
-        );
+            supportLine;
+    }
+
+    // /help command
+    bot.command('help', async (ctx) => {
+        await ctx.reply(await getHelpMessage(), { parse_mode: 'Markdown' });
     });
 
     bot.hears('❓ Help', async (ctx) => {
-        await ctx.reply(
-            `❓ *Help & Commands*\n\n` +
-            `/start - Start the bot\n` +
-            `/browse - Browse all products\n` +
-            `/balance - Check your balance\n` +
-            `/pay - Add funds to your account\n` +
-            `/orders - View your orders\n` +
-            `/help - Show this help message\n\n` +
-            `For support, contact the admin.`,
-            { parse_mode: 'Markdown' }
-        );
+        await ctx.reply(await getHelpMessage(), { parse_mode: 'Markdown' });
     });
 
     // Handle text messages for custom amount and Binance Order ID
