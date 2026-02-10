@@ -97,7 +97,7 @@ function createBot(token) {
             `/pay - Add funds to your account\n` +
             `/orders - View your orders\n` +
             `/help - Show this help message\n\n` +
-            `For support, contact the admin.`,
+            `For support, contact the admin: @seven_alfa .`,
             { parse_mode: 'Markdown' }
         );
     });
