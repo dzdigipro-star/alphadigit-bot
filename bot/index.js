@@ -77,7 +77,7 @@ function createBot(token) {
     async function getHelpMessage() {
         const supportAgent = await getSetting('support_agent');
         const supportLine = supportAgent
-            ? `For support, contact @${supportAgent}`
+            ? `For support, contact @${supportAgent.replace(/_/g, '\\_')}`
             : `For support, contact the admin.`;
 
         return `❓ *Help & Commands*\n\n` +
